@@ -66,6 +66,12 @@ const navItems = [
   { id: "menu", label: "今日菜单", icon: "♨" },
   { id: "mine", label: "我的", icon: "◯" },
 ];
+const themeOptions = [
+  { id: "spring", label: "春日花园", icon: "🌸", note: "樱花、嫩芽与新的期待" },
+  { id: "summer", label: "夏日海风", icon: "🌊", note: "晴空、海浪与清爽活力" },
+  { id: "autumn", label: "秋日暖阳", icon: "🍂", note: "金色、果实与温暖陪伴" },
+  { id: "winter", label: "冬日星夜", icon: "❄️", note: "雪光、星星与安静团聚" },
+];
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function load(key, fallback) { try { const raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); } catch { return fallback; } }
@@ -82,8 +88,13 @@ if (Number(load("family_onboarding_version", 0)) < 1) {
 }
 
 const state = {
-  view: "home", filter: "全部", tasks: load("family_tasks", clone(taskSeed)), points: Number(load("family_points", 0)), rewards: load("family_rewards", clone(rewardSeed)), adminUsers: load("family_admin_users", clone(adminSeed)), role: "超管", menuIndex: Number(load("family_menu", 0)), weather: load("family_weather", weatherOptions[0]), photo: load("family_photo", ""), rating: Number(load("family_rating", 0)),
+  view: "home", filter: "全部", tasks: load("family_tasks", clone(taskSeed)), points: Number(load("family_points", 0)), rewards: load("family_rewards", clone(rewardSeed)), adminUsers: load("family_admin_users", clone(adminSeed)), role: "超管", menuIndex: Number(load("family_menu", 0)), weather: load("family_weather", weatherOptions[0]), photo: load("family_photo", ""), rating: Number(load("family_rating", 0)), theme: load("family_theme", "spring"),
 };
+
+function applyTheme() {
+  const theme = themeOptions.some((item) => item.id === state.theme) ? state.theme : "spring";
+  state.theme = theme; document.body.dataset.theme = theme;
+}
 
 if (!load("family_household_id", "")) {
   state.tasks = []; state.points = 0; state.rewards = []; state.menuIndex = 0; state.photo = ""; state.rating = 0;
@@ -231,9 +242,10 @@ async function shareInvite() {
 }
 
 function renderSetup() {
+  applyTheme();
   const step = onboarding.step;
   const dots = [1, 2, 3].map((item) => `<span class="setup-step-dot ${item <= step ? "is-active" : ""} ${item < step ? "is-done" : ""}">${item < step ? "✓" : item}</span>`).join("");
-  const stepOne = `<div class="setup-badge">新手任务 · 1 / 3</div><h1>开启你的<br /><em>家庭小乐园</em></h1><p class="setup-lead">把每一天变成一场小冒险。任务、星星和今日菜单，都会在这里陪伴你们。</p><div class="setup-feature-list"><div><span>✦</span><b>一起完成小任务</b><small>让孩子主动行动起来</small></div><div><span>🍲</span><b>每天都有好菜单</b><small>根据家人情况智能推荐</small></div><div><span>💛</span><b>家人实时同步</b><small>一个家庭，多台手机</small></div></div><button class="setup-main-button" data-setup-next>开始冒险 <span>→</span></button><button class="setup-join" data-onboard-join>我有邀请码，加入家庭</button>`;
+  const stepOne = `<div class="setup-badge">新手任务 · 1 / 3</div><h1>开启你的<br /><em>家庭小乐园</em></h1><p class="setup-lead">把每一天过成值得期待的幸福日常。任务、星星和今日菜单，会陪你们一起把平凡日子点亮。</p><div class="setup-feature-list"><div><span>✦</span><b>一起完成小任务</b><small>让孩子主动行动起来</small></div><div><span>🍲</span><b>每天都有好菜单</b><small>根据家人情况智能推荐</small></div><div><span>💛</span><b>家人实时同步</b><small>一个家庭，多台手机</small></div></div><button class="setup-main-button" data-setup-next>开启幸福生活 <span>→</span></button><button class="setup-join" data-onboard-join>我有邀请码，加入家庭</button>`;
   const stepTwo = `<div class="setup-badge">创建你的基地 · 2 / 3</div><h1>给小乐园<br /><em>取个名字</em></h1><p class="setup-lead">这是属于你们家的专属基地，家人都会看到这个名字。</p><label class="setup-field"><span>家庭名称</span><input id="onboard-family-name" value="${escapeHtml(onboarding.familyName)}" maxlength="30" placeholder="例如：星星小屋" /></label><div class="setup-field"><span>家庭人口</span><div class="stepper"><button type="button" data-member-minus aria-label="减少家庭人口">−</button><strong id="onboard-member-count">${onboarding.memberCount}</strong><button type="button" data-member-plus aria-label="增加家庭人口">＋</button></div><small>用于后续推荐更合适的家庭菜单</small></div><div class="setup-tip">🌟 先从 5 人开始也没关系，之后还能在“我的”里调整。</div><div class="setup-actions"><button class="setup-back" data-setup-back>← 返回</button><button class="setup-main-button" data-setup-next>下一步 <span>→</span></button></div>`;
   const stepThree = `<div class="setup-badge">认识你 · 3 / 3</div><h1>你是这个家的<br /><em>第一位探险家</em></h1><p class="setup-lead">设置一个家人容易认出的称呼，创建后你将成为家庭超管，可以邀请其他家人加入。</p><label class="setup-field"><span>你的称呼</span><input id="onboard-display-name" value="${escapeHtml(onboarding.displayName)}" maxlength="20" placeholder="例如：爸爸、妈妈、墨晨" /></label><div class="setup-preview"><div class="setup-preview-avatar">🧑‍🚀</div><div><small>你的家庭身份</small><strong>${escapeHtml(onboarding.displayName || "家庭创建者")}</strong><span>家庭超管 · 可以发送邀请</span></div><span class="setup-preview-check">✓</span></div><div class="setup-tip">🔐 创建后会清空示例数据，从 0 颗成长星星开始。</div><div class="setup-actions"><button class="setup-back" data-setup-back>← 返回</button><button class="setup-main-button setup-create" data-onboard-create>创建我的家庭 <span>✦</span></button></div><p class="setup-feedback" data-onboard-feedback></p>`;
   app.innerHTML = `<main class="setup-shell"><div class="setup-stars" aria-hidden="true"><i>✦</i><i>·</i><i>✦</i><i>·</i><i>✧</i></div><div class="setup-topbar"><div class="setup-brand"><span>✦</span><b>家里有光</b></div><div class="setup-progress"><div class="setup-progress-line"><i style="width:${(step - 1) * 50}%"></i></div>${dots}</div></div><div class="setup-stage"><div class="setup-mascot"><div class="mascot-halo"></div><div class="mascot-cloud cloud-a">✦</div><div class="mascot-cloud cloud-b">·</div><div class="mascot-orb">${step === 1 ? "🏠" : step === 2 ? "🪄" : "🧑‍🚀"}</div><div class="mascot-ring"></div></div><section class="setup-card">${step === 1 ? stepOne : step === 2 ? stepTwo : stepThree}</section></div><p class="setup-footnote">一个家 · 一起玩 · 一起发光</p></main>`;
@@ -259,6 +271,7 @@ function renderSetup() {
 }
 
 function render() {
+  applyTheme();
   if (!cloud.householdId) { renderSetup(); return; }
   const menu = currentMenu(); const tasks = state.filter === "全部" ? state.tasks : state.tasks.filter((task) => task.category === state.filter); const reward = nextReward();
   app.innerHTML = `
@@ -272,6 +285,12 @@ function render() {
 }
 
 function bindEvents() {
+  const mineView = app.querySelector('[data-view="mine"]');
+  if (mineView) {
+    const themeCard = document.createElement("div"); themeCard.className = "theme-card";
+    themeCard.innerHTML = `<div class="theme-card-head"><div><h3>页面换肤</h3><p>选择一家人喜欢的季节氛围</p></div><span class="theme-current">${themeOptions.find((item) => item.id === state.theme)?.icon || "🌸"}</span></div><div class="theme-grid">${themeOptions.map((item) => `<button class="theme-option ${state.theme === item.id ? "active" : ""}" data-theme="${item.id}"><span>${item.icon}</span><b>${item.label}</b><small>${item.note}</small></button>`).join("")}</div>`;
+    mineView.querySelector(".cloud-card")?.before(themeCard);
+  }
   app.querySelectorAll("[data-nav]").forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.nav; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }));
   app.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => { state.filter = button.dataset.filter; render(); }));
   app.querySelectorAll("[data-task]").forEach((button) => button.addEventListener("click", () => completeTask(button.dataset.task)));
@@ -289,6 +308,7 @@ function bindEvents() {
   app.querySelectorAll("[data-action=share-invite]").forEach((button) => button.addEventListener("click", shareInvite));
   app.querySelectorAll("[data-action=copy-invite]").forEach((button) => button.addEventListener("click", async () => { try { await navigator.clipboard.writeText(cloud.inviteCode); showToast(`邀请码 ${cloud.inviteCode} 已复制`); } catch { showToast(`邀请码：${cloud.inviteCode}`); } }));
   app.querySelectorAll("[data-action=weather]").forEach((button) => button.addEventListener("click", () => { const index = weatherOptions.indexOf(state.weather); state.weather = weatherOptions[(index + 1) % weatherOptions.length]; save("family_weather", state.weather); state.menuIndex = weatherOptions.indexOf(state.weather) % menuSeed.length; save("family_menu", state.menuIndex); void syncCloudState(); render(); showToast(`已按“${state.weather}”重新推荐`); }));
+  app.querySelectorAll("[data-theme]").forEach((button) => button.addEventListener("click", () => { state.theme = button.dataset.theme; save("family_theme", state.theme); applyTheme(); render(); showToast(`已换上${themeOptions.find((item) => item.id === state.theme)?.label || "新皮肤"}`); }));
 }
 
 function completeTask(id) {
