@@ -463,10 +463,18 @@ function startVoice() {
 }
 
 function regenerateMenu(idea = "") {
-  const text = String(idea); let next = (state.menuIndex + 1) % menuSeed.length;
-  if (text.includes("雨") || text.includes("汤") || text.includes("暖")) next = 1;
-  if (text.includes("晴") || text.includes("干燥") || text.includes("鱼")) next = 2;
-  if (text.includes("清淡") || text.includes("孩子") || text.includes("老人")) next = 0;
+  const text = String(idea).trim(); let next = (state.menuIndex + 1) % menuSeed.length;
+  if (text && text !== "换一组") {
+    const scored = menuSeed.map((menu, index) => {
+      const haystack = [menu.name, menu.reason, menu.nutrition, ...(menu.tags || []), ...menu.dishes.flatMap((dish) => [dish.name, dish.role, ...(dish.ingredients || [])])].join("");
+      const keywords = ["鱼", "虾", "鸡", "牛", "排骨", "豆腐", "鸡蛋", "蔬菜", "清淡", "少油", "蒸", "炒", "凉拌", "热乎", "暖", "雨", "晴", "干燥", "孩子", "老人", "不辣"];
+      const score = keywords.reduce((total, keyword) => total + (text.includes(keyword) && haystack.includes(keyword) ? 1 : 0), 0);
+      return { index, score };
+    });
+    const bestScore = Math.max(...scored.map((item) => item.score));
+    const candidates = bestScore > 0 ? scored.filter((item) => item.score === bestScore) : [];
+    if (candidates.length) next = (candidates.find((item) => item.index > state.menuIndex) || candidates[0]).index;
+  }
   state.menuIndex = next; save("family_menu", state.menuIndex); void syncCloudState(); state.view = "menu"; render(); showToast(idea ? `已按你的想法推荐「${currentMenu().name}」` : `已换一组：${currentMenu().name}`); return currentMenu();
 }
 
