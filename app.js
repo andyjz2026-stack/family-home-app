@@ -77,6 +77,10 @@ function migrateData() {
 }
 migrateData();
 
+if (Number(load("family_onboarding_version", 0)) < 1) {
+  ["family_household_id", "family_invite_code", "family_name", "family_member_count"].forEach((key) => { try { localStorage.removeItem(key); } catch {} });
+}
+
 const state = {
   view: "home", filter: "全部", tasks: load("family_tasks", clone(taskSeed)), points: Number(load("family_points", 0)), rewards: load("family_rewards", clone(rewardSeed)), adminUsers: load("family_admin_users", clone(adminSeed)), role: "超管", menuIndex: Number(load("family_menu", 0)), weather: load("family_weather", weatherOptions[0]), photo: load("family_photo", ""), rating: Number(load("family_rating", 0)),
 };
@@ -181,14 +185,14 @@ async function createCloudHousehold(name, displayName, memberCount = 5) {
   await ensureCloudAuth();
   const { data, error } = await supabaseClient.rpc("create_family_household", { p_name: name, p_display_name: displayName, p_member_count: Number(memberCount) || 5 });
   if (error) throw error;
-  cloud.householdId = data.household_id; cloud.inviteCode = data.invite_code; cloud.familyName = data.family_name || name; cloud.memberCount = Number(data.member_count || memberCount) || 5; state.role = data.role || "超管"; save("family_household_id", cloud.householdId); save("family_invite_code", cloud.inviteCode); save("family_name", cloud.familyName); save("family_member_count", cloud.memberCount); await syncCloudState(); await loadCloudState(); subscribeCloud();
+  cloud.householdId = data.household_id; cloud.inviteCode = data.invite_code; cloud.familyName = data.family_name || name; cloud.memberCount = Number(data.member_count || memberCount) || 5; state.role = data.role || "超管"; save("family_household_id", cloud.householdId); save("family_invite_code", cloud.inviteCode); save("family_name", cloud.familyName); save("family_member_count", cloud.memberCount); save("family_onboarding_version", 1); await syncCloudState(); await loadCloudState(); subscribeCloud();
 }
 
 async function joinCloudHousehold(code, displayName) {
   await ensureCloudAuth();
   const { data, error } = await supabaseClient.rpc("join_family_household", { p_invite_code: code, p_display_name: displayName });
   if (error) throw error;
-  cloud.householdId = data.household_id; cloud.inviteCode = data.invite_code; cloud.familyName = data.family_name || cloud.familyName; cloud.memberCount = Number(data.member_count || cloud.memberCount || 5); state.role = data.role || "成员"; save("family_household_id", cloud.householdId); save("family_invite_code", cloud.inviteCode); save("family_name", cloud.familyName); save("family_member_count", cloud.memberCount); await loadCloudState(); subscribeCloud();
+  cloud.householdId = data.household_id; cloud.inviteCode = data.invite_code; cloud.familyName = data.family_name || cloud.familyName; cloud.memberCount = Number(data.member_count || cloud.memberCount || 5); state.role = data.role || "成员"; save("family_household_id", cloud.householdId); save("family_invite_code", cloud.inviteCode); save("family_name", cloud.familyName); save("family_member_count", cloud.memberCount); save("family_onboarding_version", 1); await loadCloudState(); subscribeCloud();
 }
 
 function openCloudSetup() {
