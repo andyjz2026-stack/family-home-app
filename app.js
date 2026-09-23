@@ -358,7 +358,7 @@ photoInput.addEventListener("change", () => { const file = photoInput.files?.[0]
 let deferredInstallPrompt;
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); deferredInstallPrompt = event; });
 async function installApp() { if (!deferredInstallPrompt) { showToast("请在浏览器菜单中选择“添加到主屏幕”即可安装"); return; } deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; }
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=5").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=6").catch(() => {}));
 
 function registerWebMcp() {
   const context = document.modelContext; if (!context?.registerTool) return; const lifecycle = new AbortController();
