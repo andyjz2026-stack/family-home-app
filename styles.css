@@ -141,6 +141,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .steps li { display: flex; gap: 10px; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .steps li::before { counter-increment: step; content: counter(step); display: grid; place-items: center; flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; color: #fff; background: var(--coral); font-family: Nunito, sans-serif; font-weight: 900; }
 .menu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 16px; }
+.menu-actions > :only-child { grid-column: 1 / -1; width: 100%; }
 .primary-button, .secondary-button { min-height: 45px; padding: 10px 12px; border-radius: 13px; font-size: 13px; font-weight: 800; transition: transform .18s ease; }
 .primary-button { color: #fffaf1; background: var(--coral); }
 .secondary-button { color: var(--coral-dark); background: #fff0e7; }
