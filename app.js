@@ -94,6 +94,11 @@ function cloudStatusText() {
   return cloud.status;
 }
 
+function cloudErrorMessage(error) {
+  const message = error?.message || String(error || "");
+  return /failed to fetch|networkerror|load failed/i.test(message) ? "无法连接云端，请检查手机网络后重试" : (message || "连接失败，请稍后重试");
+}
+
 async function ensureCloudAuth() {
   if (!supabaseClient) throw new Error("云端配置未加载");
   const sessionResult = await supabaseClient.auth.getSession();
@@ -147,13 +152,13 @@ async function initCloudSync() {
     await ensureCloudAuth();
     if (!cloud.householdId) { cloud.status = "待创建或加入"; render(); return; }
     await loadCloudState(); subscribeCloud();
-  } catch (error) { cloud.status = "连接失败"; cloud.error = error.message || String(error); render(); }
+  } catch (error) { cloud.status = "连接失败"; cloud.error = cloudErrorMessage(error); render(); }
 }
 
 async function syncCloudState() {
   if (!supabaseClient || !cloud.householdId) return;
   const { error } = await supabaseClient.from("family_state").upsert({ household_id: cloud.householdId, tasks: state.tasks, points: state.points, rewards: state.rewards, menu_index: state.menuIndex, weather: state.weather, photo: state.photo || "", rating: state.rating, updated_at: new Date().toISOString() }, { onConflict: "household_id" });
-  if (error) { cloud.status = "连接失败"; cloud.error = error.message; render(); }
+  if (error) { cloud.status = "连接失败"; cloud.error = cloudErrorMessage(error); render(); }
 }
 
 async function createCloudHousehold(name, displayName) {
@@ -175,7 +180,7 @@ function openCloudSetup() {
   wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="连接家庭云端"><h2>连接家庭云端</h2><p>创建家庭后会生成邀请码，把邀请码发给家人，就能在不同手机同步任务、星星和奖励。</p><div class="form-grid"><label>你的称呼<input id="cloud-name" value="${state.role === "超管" ? "墨晨" : "家庭成员"}" /></label><label>已有家庭邀请码（加入时填写）<input id="cloud-code" placeholder="例如：A1B2C3D4" /></label></div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="secondary-button" data-cloud-join>加入家庭</button><button class="primary-button" data-cloud-create>创建新家庭</button></div></div>`;
   document.body.appendChild(wrapper);
   wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
-  const finish = (action) => async () => { const name = wrapper.querySelector("#cloud-name").value.trim() || "家庭成员"; const code = wrapper.querySelector("#cloud-code").value.trim(); try { wrapper.querySelectorAll("button").forEach((button) => { button.disabled = true; }); if (action === "join" && !code) throw new Error("请先填写邀请码"); if (action === "join") await joinCloudHousehold(code, name); else await createCloudHousehold("墨晨一家", name); wrapper.remove(); render(); showToast("家庭云端已连接，其他手机可用邀请码加入"); } catch (error) { wrapper.querySelector("p").textContent = error.message || "连接失败，请稍后重试"; wrapper.querySelectorAll("button").forEach((button) => { button.disabled = false; }); } };
+  const finish = (action) => async () => { const name = wrapper.querySelector("#cloud-name").value.trim() || "家庭成员"; const code = wrapper.querySelector("#cloud-code").value.trim(); try { wrapper.querySelectorAll("button").forEach((button) => { button.disabled = true; }); wrapper.querySelector("p").textContent = "正在连接云端，请稍候…"; if (action === "join" && !code) throw new Error("请先填写邀请码"); if (action === "join") await joinCloudHousehold(code, name); else await createCloudHousehold("墨晨一家", name); wrapper.remove(); render(); showToast("家庭云端已连接，其他手机可用邀请码加入"); } catch (error) { wrapper.querySelector("p").textContent = cloudErrorMessage(error); wrapper.querySelectorAll("button").forEach((button) => { button.disabled = false; }); } };
   wrapper.querySelector("[data-cloud-join]").addEventListener("click", finish("join")); wrapper.querySelector("[data-cloud-create]").addEventListener("click", finish("create"));
 }
 
