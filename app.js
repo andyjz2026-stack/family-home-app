@@ -332,11 +332,10 @@ function bindEvents() {
   app.querySelectorAll("[data-rating]").forEach((button) => button.addEventListener("click", () => { state.rating = Number(button.dataset.rating); save("family_rating", state.rating); void syncCloudState(); render(); showToast(`已给今日组合 ${state.rating} 星鼓励 ✨`); }));
   app.querySelectorAll("[data-action=voice]").forEach((button) => button.addEventListener("click", startVoice));
   app.querySelectorAll("[data-action=regenerate]").forEach((button) => button.addEventListener("click", () => regenerateMenu()));
+  app.querySelector(".menu-actions [data-action=photo]")?.remove();
   app.querySelectorAll("[data-action=photo]").forEach((button) => { button.textContent = state.photo ? "更换照片" : "点击上传照片"; button.addEventListener("click", () => photoInput.click()); });
-  app.querySelectorAll(".photo-preview").forEach((preview) => { if (!state.photo) preview.textContent = "点击上传照片，可拍照或从相册选择"; });
+  app.querySelectorAll(".photo-preview").forEach((preview) => { if (!state.photo) preview.textContent = "点击上传照片，可拍照或从相册选择"; preview.addEventListener("click", () => photoInput.click()); preview.setAttribute("role", "button"); preview.setAttribute("tabindex", "0"); });
   const photoCaption = app.querySelector(".photo-review .rating-caption"); if (photoCaption) photoCaption.textContent = state.rating ? `${state.rating} 星 · 系统自动评分` : "上传后自动评分";
-  app.querySelector(".photo-review [data-action=photo]")?.remove();
-  const menuPhotoButton = app.querySelector(".menu-actions [data-action=photo]"); if (menuPhotoButton) menuPhotoButton.textContent = state.photo ? "更换照片" : "上传照片";
   app.querySelector(".menu-context")?.remove(); app.querySelector(".dish-badge")?.remove();
   const menuMeta = app.querySelector(".menu-card-header p"); if (menuMeta) menuMeta.textContent = "根据家人年龄、季节和天气自动推荐";
   app.querySelectorAll("[data-action=install]").forEach((button) => button.addEventListener("click", installApp));
