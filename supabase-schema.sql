@@ -6,9 +6,14 @@ create extension if not exists pgcrypto;
 create table if not exists public.family_households (
   id uuid primary key default gen_random_uuid(),
   name text not null default '墨晨一家',
+  member_count integer not null default 5 check (member_count between 1 and 30),
   invite_code text not null unique default upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 8)),
   created_at timestamptz not null default now()
 );
+
+alter table public.family_households add column if not exists member_count integer not null default 5;
+alter table public.family_households drop constraint if exists family_households_member_count_check;
+alter table public.family_households add constraint family_households_member_count_check check (member_count between 1 and 30);
 
 create table if not exists public.family_members (
   id uuid primary key default gen_random_uuid(),
@@ -42,16 +47,16 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (select 1 from public.family_members where household_id = target_household and user_id = auth.uid() and role in ('超管', '管理员'));
 $$;
 
-create or replace function public.create_family_household(p_name text, p_display_name text)
+create or replace function public.create_family_household(p_name text, p_display_name text, p_member_count integer)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   new_household public.family_households;
 begin
   if auth.uid() is null then raise exception '请先完成匿名登录'; end if;
-  insert into public.family_households(name) values (coalesce(nullif(trim(p_name), ''), '墨晨一家')) returning * into new_household;
+  insert into public.family_households(name, member_count) values (coalesce(nullif(trim(p_name), ''), '我的家庭'), greatest(1, least(coalesce(p_member_count, 5), 30))) returning * into new_household;
   insert into public.family_members(household_id, user_id, display_name, role) values (new_household.id, auth.uid(), coalesce(nullif(trim(p_display_name), ''), '墨晨'), '超管');
   insert into public.family_state(household_id) values (new_household.id);
-  return jsonb_build_object('household_id', new_household.id, 'invite_code', new_household.invite_code, 'role', '超管');
+  return jsonb_build_object('household_id', new_household.id, 'invite_code', new_household.invite_code, 'family_name', new_household.name, 'member_count', new_household.member_count, 'role', '超管');
 end;
 $$;
 
@@ -68,7 +73,7 @@ begin
   if existing.id is null then
     insert into public.family_members(household_id, user_id, display_name, role) values (target.id, auth.uid(), coalesce(nullif(trim(p_display_name), ''), '家庭成员'), '成员') returning * into existing;
   end if;
-  return jsonb_build_object('household_id', target.id, 'invite_code', target.invite_code, 'role', existing.role);
+  return jsonb_build_object('household_id', target.id, 'invite_code', target.invite_code, 'family_name', target.name, 'member_count', target.member_count, 'role', existing.role);
 end;
 $$;
 
