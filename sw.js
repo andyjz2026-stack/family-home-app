@@ -1,4 +1,4 @@
-const CACHE = "family-home-v2";
+const CACHE = "family-home-v3";
 const BASE = self.registration.scope;
 const ASSETS = [BASE, `${BASE}index.html`, `${BASE}app.js`, `${BASE}styles.css`, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS))));
