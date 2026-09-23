@@ -335,6 +335,10 @@ function bindEvents() {
   app.querySelectorAll("[data-action=photo]").forEach((button) => { button.textContent = state.photo ? "更换照片" : "点击上传照片"; button.addEventListener("click", () => photoInput.click()); });
   app.querySelectorAll(".photo-preview").forEach((preview) => { if (!state.photo) preview.textContent = "点击上传照片，可拍照或从相册选择"; });
   const photoCaption = app.querySelector(".photo-review .rating-caption"); if (photoCaption) photoCaption.textContent = state.rating ? `${state.rating} 星 · 系统自动评分` : "上传后自动评分";
+  app.querySelector(".photo-review [data-action=photo]")?.remove();
+  const menuPhotoButton = app.querySelector(".menu-actions [data-action=photo]"); if (menuPhotoButton) menuPhotoButton.textContent = state.photo ? "更换照片" : "上传照片";
+  app.querySelector(".menu-context")?.remove(); app.querySelector(".dish-badge")?.remove();
+  const menuMeta = app.querySelector(".menu-card-header p"); if (menuMeta) menuMeta.textContent = "根据家人年龄、季节和天气自动推荐";
   app.querySelectorAll("[data-action=install]").forEach((button) => button.addEventListener("click", installApp));
   app.querySelectorAll("[data-action=reward]").forEach((button) => button.addEventListener("click", () => showToast("继续完成任务，解锁下一档家庭奖励吧！")));
   app.querySelectorAll("[data-reward-detail]").forEach((button) => button.addEventListener("click", () => { const reward = state.rewards[Number(button.dataset.rewardDetail)]; if (reward) showToast(`${reward.title}：${reward.description}（${reward.points} 星）`); }));
@@ -366,10 +370,10 @@ function openTaskEditor(id = "") {
 
 function openRewardEditor() {
   if (!canManage()) return;
-  const rows = [...state.rewards, { id: "new", title: "", description: "", points: "" }]; const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
-  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="设置阶梯奖励"><h2>奖励与星星设置</h2><p>每一档都可以自定义奖励名称、说明和需要的星星数量。留空的新增档位不会保存。</p><div class="reward-editor-list">${rows.map((item, index) => `<div class="reward-editor-row" data-reward-row="${index}"><input data-reward-title placeholder="奖励名称" value="${escapeHtml(item.title)}" /><input data-reward-description placeholder="奖励说明" value="${escapeHtml(item.description)}" /><input data-reward-points type="number" min="1" placeholder="星星" value="${item.points}" /></div>`).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存阶梯奖励</button></div></div>`;
+  const rows = [...state.rewards, { id: "new", title: "", points: "" }]; const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
+  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="设置阶梯奖励"><h2>奖励与星星设置</h2><p>每一档只需要填写奖励名称和需要的星星数，保存后会显示在成长进度条上。</p><div class="reward-editor-list">${rows.map((item, index) => `<div class="reward-editor-row reward-editor-simple" data-reward-row="${index}"><input data-reward-title placeholder="奖励名称" value="${escapeHtml(item.title)}" /><input data-reward-points type="number" min="1" placeholder="需要星星" value="${item.points}" /></div>`).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存阶梯奖励</button></div></div>`;
   document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
-  wrapper.querySelector("[data-save]").addEventListener("click", () => { const rewards = Array.from(wrapper.querySelectorAll("[data-reward-row]")).map((row, index) => ({ id: state.rewards[index]?.id || `reward-${Date.now()}-${index}`, title: row.querySelector("[data-reward-title]").value.trim(), description: row.querySelector("[data-reward-description]").value.trim(), points: Number(row.querySelector("[data-reward-points]").value) || 0 })).filter((item) => item.title && item.points > 0).sort((a, b) => a.points - b.points); if (!rewards.length) return; state.rewards = rewards; save("family_rewards", state.rewards); void syncCloudState(); wrapper.remove(); render(); showToast("阶梯奖励已更新"); });
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { const rewards = Array.from(wrapper.querySelectorAll("[data-reward-row]")).map((row, index) => ({ id: state.rewards[index]?.id || `reward-${Date.now()}-${index}`, title: row.querySelector("[data-reward-title]").value.trim(), description: state.rewards[index]?.description || "", points: Number(row.querySelector("[data-reward-points]").value) || 0 })).filter((item) => item.title && item.points > 0).sort((a, b) => a.points - b.points); if (!rewards.length) return; state.rewards = rewards; save("family_rewards", state.rewards); void syncCloudState(); wrapper.remove(); render(); showToast("阶梯奖励已更新"); });
 }
 
 async function openPermissionEditor() {
