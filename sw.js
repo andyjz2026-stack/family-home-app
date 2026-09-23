@@ -1,6 +1,6 @@
-const CACHE = "family-home-v3";
+const CACHE = "family-home-v4";
 const BASE = self.registration.scope;
-const ASSETS = [BASE, `${BASE}index.html`, `${BASE}app.js`, `${BASE}styles.css`, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`];
+const ASSETS = [BASE, `${BASE}index.html`, `${BASE}app-cloud.js`, `${BASE}styles.css`, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`, `${BASE}supabase.js`, `${BASE}supabase-config.js`];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS))));
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", (event) => {
