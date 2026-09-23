@@ -1,4 +1,4 @@
-const CACHE = "family-home-v5";
+const CACHE = "family-home-v6";
 const BASE = self.registration.scope;
 const ASSETS = [BASE, `${BASE}index.html`, `${BASE}app.js`, `${BASE}styles.css`, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`, `${BASE}supabase.js`, `${BASE}supabase-config.js`];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS))));
