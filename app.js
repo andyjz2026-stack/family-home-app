@@ -59,23 +59,23 @@ function render() {
       <div class="phone-frame">
         <header class="topbar">
           <div class="brand"><div class="brand-mark">✦</div><div class="brand-text"><strong>家里有光</strong><span>家庭小乐园</span></div></div>
-          <button class="profile-button" data-nav="mine" aria-label="打开我的设置"><span class="avatar">🧒</span><span>小宇一家</span></button>
+          <button class="profile-button" data-nav="mine" aria-label="打开我的设置"><span class="avatar">🧒</span><span>墨晨一家</span></button>
         </header>
 
         <section class="view ${state.view === "home" ? "active" : ""}" data-view="home">
           <div class="eyebrow">星期三 · 9 月 23 日</div>
-          <h1 class="view-title">下午好，小宇一家<br />今天也一起发光吧。</h1>
+          <h1 class="view-title">下午好，墨晨一家<br />今天也一起发光吧。</h1>
           <div class="home-grid">
             <article class="hero-card"><h1>完成一个小任务，<br />打开今天的惊喜。</h1><p>每一次行动都会变成成长能量。先从最简单的一件事开始吧。</p><button class="hero-action" data-nav="tasks">去看看任务 <span>→</span></button></article>
-            <div><div class="section-heading"><h2>小宇的今日进度</h2><button data-nav="tasks">查看全部</button></div><div class="progress-card"><div class="progress-top"><strong>${completedCount()} / ${state.tasks.length} 个任务</strong><span>✦ ${state.points} 星星</span></div><div class="progress-track" style="--progress:${progressPercent()}%"><i></i></div><div class="progress-meta"><span>连续完成 <b>3 天</b></span><span>${progressPercent() === 100 ? "今日全完成！" : "再完成一个就升级"}</span></div></div></div>
+            <div><div class="section-heading"><h2>墨晨的今日进度</h2><button data-nav="tasks">查看全部</button></div><div class="progress-card"><div class="progress-top"><strong>${completedCount()} / ${state.tasks.length} 个任务</strong><span>✦ ${state.points} 星星</span></div><div class="progress-track" style="--progress:${progressPercent()}%"><i></i></div><div class="progress-meta"><span>连续完成 <b>3 天</b></span><span>${progressPercent() === 100 ? "今日全完成！" : "再完成一个就升级"}</span></div></div></div>
             <div><div class="section-heading"><h2>今日推荐菜单</h2><button data-nav="menu">打开菜单</button></div><button class="menu-preview" data-nav="menu"><span class="dish-visual">${menu.emoji}</span><span><h3>${menu.name}</h3><p>${menu.reason}</p></span></button></div>
           </div>
-          <div class="section-heading"><h2>快速操作</h2></div><div class="quick-grid"><button class="quick-button" data-nav="tasks"><span>✦</span><b>给小宇布置任务<small>学习、运动、家务、手工</small></b></button><button class="quick-button" data-action="voice"><span>🎙️</span><b>告诉我想吃什么<small>说一句话，重新推荐</small></b></button></div>
+          <div class="section-heading"><h2>快速操作</h2></div><div class="quick-grid"><button class="quick-button" data-nav="tasks"><span>✦</span><b>给墨晨布置任务<small>学习、运动、家务、手工</small></b></button><button class="quick-button" data-action="voice"><span>🎙️</span><b>告诉我想吃什么<small>说一句话，重新推荐</small></b></button></div>
         </section>
 
         <section class="view ${state.view === "tasks" ? "active" : ""}" data-view="tasks">
           <div class="eyebrow">今日成长能量</div><h1 class="view-title">任务乐园</h1>
-          <div class="points-banner"><div><small>小宇的成长星星</small><strong>${state.points}</strong></div><span class="trophy">🏆</span></div>
+          <div class="points-banner"><div><small>墨晨的成长星星</small><strong>${state.points}</strong></div><span class="trophy">🏆</span></div>
           <div class="section-heading"><h2>今天挑战什么？</h2><span class="rating-caption">完成后会获得星星</span></div>
           <div class="filter-row">${categories.map((category) => `<button class="filter-chip ${state.filter === category ? "active" : ""}" data-filter="${category}">${category}</button>`).join("")}</div>
           <div class="task-list">${tasks.map((task) => `<button class="task-card ${task.done ? "done" : ""}" data-task="${task.id}"><span class="task-icon">${task.icon}</span><span><h3>${task.title}</h3><p>${task.detail}</p></span><span><span class="task-points">${task.points}</span><span class="task-check">✓</span></span></button>`).join("")}</div>
@@ -89,7 +89,7 @@ function render() {
         </section>
 
         <section class="view ${state.view === "mine" ? "active" : ""}" data-view="mine">
-          <div class="eyebrow">小宇一家</div><h1 class="view-title">我的</h1><div class="settings-card"><div class="setting-row"><span><strong>家庭成员</strong><small>爷爷 · 奶奶 · 爸爸 · 妈妈 · 小宇</small></span><span class="setting-value">5 人</span></div><div class="setting-row"><span><strong>孩子模式</strong><small>大图标、鼓励反馈、少文字</small></span><span class="setting-value">已开启</span></div><div class="setting-row"><span><strong>语音入口</strong><small>支持说出想吃什么</small></span><span class="setting-value">可用</span></div></div><div class="install-card"><h3>把家里有光放到手机桌面</h3><p>安装后像普通 App 一样打开，任务和菜单也能在没有网络时继续查看。</p><button data-action="install">添加到手机</button></div><div class="section-heading"><h2>关于这个家</h2></div><div class="empty-card" style="padding:17px;border-radius:20px"><p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">这是第一版家庭小乐园。之后可以继续加入家庭相册、健康提醒、共享日历和采购清单。</p></div>
+          <div class="eyebrow">墨晨一家</div><h1 class="view-title">我的</h1><div class="settings-card"><div class="setting-row"><span><strong>家庭成员</strong><small>爷爷 · 奶奶 · 爸爸 · 妈妈 · 墨晨</small></span><span class="setting-value">5 人</span></div><div class="setting-row"><span><strong>孩子模式</strong><small>大图标、鼓励反馈、少文字</small></span><span class="setting-value">已开启</span></div><div class="setting-row"><span><strong>语音入口</strong><small>支持说出想吃什么</small></span><span class="setting-value">可用</span></div></div><div class="install-card"><h3>把家里有光放到手机桌面</h3><p>安装后像普通 App 一样打开，任务和菜单也能在没有网络时继续查看。</p><button data-action="install">添加到手机</button></div><div class="section-heading"><h2>关于这个家</h2></div><div class="empty-card" style="padding:17px;border-radius:20px"><p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">这是第一版家庭小乐园。之后可以继续加入家庭相册、健康提醒、共享日历和采购清单。</p></div>
         </section>
       </div>
     </div>
