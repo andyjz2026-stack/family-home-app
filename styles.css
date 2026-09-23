@@ -198,6 +198,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .form-grid textarea { min-height: 70px; }
 .reward-editor-list, .permission-list { display: grid; gap: 8px; max-height: 46vh; overflow: auto; }
 .reward-editor-row { display: grid; grid-template-columns: 1fr 1.2fr 70px; gap: 6px; }
+.reward-editor-row.reward-editor-simple { grid-template-columns: 1fr 110px; }
 .reward-editor-row input { min-width: 0; font-size: 12px; }
 .permission-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; border-radius: 13px; background: #f7f0e5; }
 .permission-row b, .permission-row small { display: block; }
