@@ -122,7 +122,11 @@ function cloudStatusText() {
 
 function cloudErrorMessage(error) {
   const message = error?.message || String(error || "");
-  return /failed to fetch|networkerror|load failed/i.test(message) ? "无法连接云端，请检查手机网络后重试" : (message || "连接失败，请稍后重试");
+  if (/failed to fetch|networkerror|load failed|blocked_by_client|network request failed/i.test(message)) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return "当前手机似乎没有网络，请联网后重试";
+    return "当前页面无法访问 Supabase 云端。请点击右上角“在浏览器打开”后重试；如果仍失败，请在 Supabase → Authentication → Sign In / Providers 中确认 Anonymous 已开启。";
+  }
+  return message || "连接失败，请稍后重试";
 }
 
 function clearLocalFamilyData() {
