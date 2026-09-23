@@ -96,6 +96,13 @@ function applyTheme() {
   state.theme = theme; document.body.dataset.theme = theme;
 }
 
+function resetThisDeviceFamily() {
+  ["family_household_id", "family_invite_code", "family_name", "family_member_count", "family_onboarding_version"].forEach((key) => { try { localStorage.removeItem(key); } catch {} });
+  if (cloud.channel && supabaseClient) void supabaseClient.removeChannel(cloud.channel);
+  cloud.channel = null; cloud.householdId = ""; cloud.inviteCode = ""; cloud.familyName = ""; cloud.status = supabaseClient ? "待创建或加入" : "未配置";
+  clearLocalFamilyData(); onboarding.step = 1; state.view = "home"; render(); showToast("本设备已清空，可以重新创建家庭了");
+}
+
 if (!load("family_household_id", "")) {
   state.tasks = []; state.points = 0; state.rewards = []; state.menuIndex = 0; state.photo = ""; state.rating = 0;
 }
@@ -290,6 +297,11 @@ function bindEvents() {
     const themeCard = document.createElement("div"); themeCard.className = "theme-card";
     themeCard.innerHTML = `<div class="theme-card-head"><div><h3>页面换肤</h3><p>选择一家人喜欢的季节氛围</p></div><span class="theme-current">${themeOptions.find((item) => item.id === state.theme)?.icon || "🌸"}</span></div><div class="theme-grid">${themeOptions.map((item) => `<button class="theme-option ${state.theme === item.id ? "active" : ""}" data-theme="${item.id}"><span>${item.icon}</span><b>${item.label}</b><small>${item.note}</small></button>`).join("")}</div>`;
     mineView.querySelector(".cloud-card")?.before(themeCard);
+    if (canInvite()) {
+      const resetCard = document.createElement("div"); resetCard.className = "reset-card";
+      resetCard.innerHTML = `<div><h3>重新创建家庭</h3><p>如果这是新家庭或想重新开始，可以清空本设备的家庭数据。</p></div><button class="secondary-button" data-action="reset-family">重新开始</button>`;
+      mineView.querySelector(".install-card")?.before(resetCard);
+    }
   }
   app.querySelectorAll("[data-nav]").forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.nav; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }));
   app.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => { state.filter = button.dataset.filter; render(); }));
@@ -306,6 +318,7 @@ function bindEvents() {
   app.querySelectorAll("[data-action=permissions]").forEach((button) => button.addEventListener("click", openPermissionEditor));
   app.querySelectorAll("[data-action=cloud-setup]").forEach((button) => button.addEventListener("click", openCloudSetup));
   app.querySelectorAll("[data-action=share-invite]").forEach((button) => button.addEventListener("click", shareInvite));
+  app.querySelectorAll("[data-action=reset-family]").forEach((button) => button.addEventListener("click", () => { if (window.confirm("确定清空本设备的家庭数据并重新创建吗？云端家庭不会被删除。")) resetThisDeviceFamily(); }));
   app.querySelectorAll("[data-action=copy-invite]").forEach((button) => button.addEventListener("click", async () => { try { await navigator.clipboard.writeText(cloud.inviteCode); showToast(`邀请码 ${cloud.inviteCode} 已复制`); } catch { showToast(`邀请码：${cloud.inviteCode}`); } }));
   app.querySelectorAll("[data-action=weather]").forEach((button) => button.addEventListener("click", () => { const index = weatherOptions.indexOf(state.weather); state.weather = weatherOptions[(index + 1) % weatherOptions.length]; save("family_weather", state.weather); state.menuIndex = weatherOptions.indexOf(state.weather) % menuSeed.length; save("family_menu", state.menuIndex); void syncCloudState(); render(); showToast(`已按“${state.weather}”重新推荐`); }));
   app.querySelectorAll("[data-theme]").forEach((button) => button.addEventListener("click", () => { state.theme = button.dataset.theme; save("family_theme", state.theme); applyTheme(); render(); showToast(`已换上${themeOptions.find((item) => item.id === state.theme)?.label || "新皮肤"}`); }));
