@@ -1,0 +1,11 @@
+{
+  "name": "家里有光 · 家庭小乐园",
+  "short_name": "家里有光",
+  "description": "让孩子行动起来，让家人一起吃饭、鼓励和分享。",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f0e6",
+  "theme_color": "#f6f0e6",
+  "lang": "zh-CN",
+  "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
