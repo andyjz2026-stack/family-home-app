@@ -217,6 +217,8 @@ function renderMenuDishes(menu) {
 
 function canInvite() { return state.role === "超管"; }
 
+const onboarding = { step: 1, familyName: "我们的家", memberCount: 5, displayName: "墨晨" };
+
 async function shareInvite() {
   if (!canInvite()) { showToast("只有家庭创建者可以发送邀请"); return; }
   const message = `加入${cloud.familyName || "我的家庭"}，打开家庭应用后输入邀请码：${cloud.inviteCode}`;
@@ -229,17 +231,31 @@ async function shareInvite() {
 }
 
 function renderSetup() {
-  app.innerHTML = `<main class="setup-shell"><div class="setup-orbit">✦</div><div class="setup-card"><div class="eyebrow">家庭小乐园 · 第一步</div><h1>先创建你的家庭</h1><p class="setup-lead">创建完成后，今日菜单、任务和星星才会属于你的家庭。你会获得唯一邀请码，再邀请家人加入。</p><div class="form-grid"><label>家庭名称<input id="onboard-family-name" value="我们的家" maxlength="30" /></label><label>家庭人口数<input id="onboard-member-count" type="number" min="1" max="30" value="5" inputmode="numeric" /><small class="field-hint">用于后续按家庭规模推荐菜单</small></label><label>你的称呼<input id="onboard-display-name" value="墨晨" maxlength="20" /></label></div><button class="primary-button setup-create" data-onboard-create>创建家庭并开始</button><button class="setup-join" data-onboard-join>我已有邀请码，加入家庭</button><p class="setup-feedback" data-onboard-feedback>创建者可以向家人发送邀请码，其他成员只能通过邀请码加入。</p></div></main>`;
+  const step = onboarding.step;
+  const dots = [1, 2, 3].map((item) => `<span class="setup-step-dot ${item <= step ? "is-active" : ""} ${item < step ? "is-done" : ""}">${item < step ? "✓" : item}</span>`).join("");
+  const stepOne = `<div class="setup-badge">新手任务 · 1 / 3</div><h1>开启你的<br /><em>家庭小乐园</em></h1><p class="setup-lead">把每一天变成一场小冒险。任务、星星和今日菜单，都会在这里陪伴你们。</p><div class="setup-feature-list"><div><span>✦</span><b>一起完成小任务</b><small>让孩子主动行动起来</small></div><div><span>🍲</span><b>每天都有好菜单</b><small>根据家人情况智能推荐</small></div><div><span>💛</span><b>家人实时同步</b><small>一个家庭，多台手机</small></div></div><button class="setup-main-button" data-setup-next>开始冒险 <span>→</span></button><button class="setup-join" data-onboard-join>我有邀请码，加入家庭</button>`;
+  const stepTwo = `<div class="setup-badge">创建你的基地 · 2 / 3</div><h1>给小乐园<br /><em>取个名字</em></h1><p class="setup-lead">这是属于你们家的专属基地，家人都会看到这个名字。</p><label class="setup-field"><span>家庭名称</span><input id="onboard-family-name" value="${escapeHtml(onboarding.familyName)}" maxlength="30" placeholder="例如：星星小屋" /></label><div class="setup-field"><span>家庭人口</span><div class="stepper"><button type="button" data-member-minus aria-label="减少家庭人口">−</button><strong id="onboard-member-count">${onboarding.memberCount}</strong><button type="button" data-member-plus aria-label="增加家庭人口">＋</button></div><small>用于后续推荐更合适的家庭菜单</small></div><div class="setup-tip">🌟 先从 5 人开始也没关系，之后还能在“我的”里调整。</div><div class="setup-actions"><button class="setup-back" data-setup-back>← 返回</button><button class="setup-main-button" data-setup-next>下一步 <span>→</span></button></div>`;
+  const stepThree = `<div class="setup-badge">认识你 · 3 / 3</div><h1>你是这个家的<br /><em>第一位探险家</em></h1><p class="setup-lead">设置一个家人容易认出的称呼，创建后你将成为家庭超管，可以邀请其他家人加入。</p><label class="setup-field"><span>你的称呼</span><input id="onboard-display-name" value="${escapeHtml(onboarding.displayName)}" maxlength="20" placeholder="例如：爸爸、妈妈、墨晨" /></label><div class="setup-preview"><div class="setup-preview-avatar">🧑‍🚀</div><div><small>你的家庭身份</small><strong>${escapeHtml(onboarding.displayName || "家庭创建者")}</strong><span>家庭超管 · 可以发送邀请</span></div><span class="setup-preview-check">✓</span></div><div class="setup-tip">🔐 创建后会清空示例数据，从 0 颗成长星星开始。</div><div class="setup-actions"><button class="setup-back" data-setup-back>← 返回</button><button class="setup-main-button setup-create" data-onboard-create>创建我的家庭 <span>✦</span></button></div><p class="setup-feedback" data-onboard-feedback></p>`;
+  app.innerHTML = `<main class="setup-shell"><div class="setup-stars" aria-hidden="true"><i>✦</i><i>·</i><i>✦</i><i>·</i><i>✧</i></div><div class="setup-topbar"><div class="setup-brand"><span>✦</span><b>家里有光</b></div><div class="setup-progress"><div class="setup-progress-line"><i style="width:${(step - 1) * 50}%"></i></div>${dots}</div></div><div class="setup-stage"><div class="setup-mascot"><div class="mascot-halo"></div><div class="mascot-cloud cloud-a">✦</div><div class="mascot-cloud cloud-b">·</div><div class="mascot-orb">${step === 1 ? "🏠" : step === 2 ? "🪄" : "🧑‍🚀"}</div><div class="mascot-ring"></div></div><section class="setup-card">${step === 1 ? stepOne : step === 2 ? stepTwo : stepThree}</section></div><p class="setup-footnote">一个家 · 一起玩 · 一起发光</p></main>`;
+
+  const readDraft = () => {
+    const familyInput = app.querySelector("#onboard-family-name");
+    const displayInput = app.querySelector("#onboard-display-name");
+    if (familyInput) onboarding.familyName = familyInput.value.trim() || "我们的家";
+    if (displayInput) onboarding.displayName = displayInput.value.trim() || "家庭成员";
+  };
+  app.querySelector("[data-setup-back]")?.addEventListener("click", () => { readDraft(); onboarding.step = Math.max(1, onboarding.step - 1); renderSetup(); });
+  app.querySelector("[data-member-minus]")?.addEventListener("click", () => { onboarding.memberCount = Math.max(1, onboarding.memberCount - 1); renderSetup(); });
+  app.querySelector("[data-member-plus]")?.addEventListener("click", () => { onboarding.memberCount = Math.min(30, onboarding.memberCount + 1); renderSetup(); });
+  app.querySelectorAll("[data-setup-next]").forEach((button) => button.addEventListener("click", () => { readDraft(); onboarding.step = Math.min(3, onboarding.step + 1); renderSetup(); }));
+  app.querySelector("[data-onboard-join]")?.addEventListener("click", openCloudSetup);
   const createButton = app.querySelector("[data-onboard-create]"); const feedback = app.querySelector("[data-onboard-feedback]");
-  createButton.addEventListener("click", async () => {
-    const familyName = app.querySelector("#onboard-family-name").value.trim() || "我们的家";
-    const displayName = app.querySelector("#onboard-display-name").value.trim() || "家庭成员";
-    const memberCount = Math.max(1, Math.min(30, Number(app.querySelector("#onboard-member-count").value) || 5));
-    createButton.disabled = true; createButton.textContent = "正在创建家庭…"; feedback.textContent = "正在连接云端并清空示例数据，请稍候…";
+  createButton?.addEventListener("click", async () => {
+    readDraft(); const familyName = onboarding.familyName || "我们的家"; const displayName = onboarding.displayName || "家庭成员"; const memberCount = onboarding.memberCount;
+    createButton.disabled = true; createButton.innerHTML = "正在点亮家庭… <span>✦</span>"; if (feedback) feedback.textContent = "正在连接云端并清空示例数据，请稍候…";
     try { await createCloudHousehold(familyName, displayName, memberCount); state.view = "home"; render(); showToast(`已创建${familyName}，可以邀请家人加入了`); }
-    catch (error) { feedback.textContent = cloudErrorMessage(error); createButton.disabled = false; createButton.textContent = "创建家庭并开始"; }
+    catch (error) { if (feedback) feedback.textContent = cloudErrorMessage(error); createButton.disabled = false; createButton.innerHTML = "创建我的家庭 <span>✦</span>"; }
   });
-  app.querySelector("[data-onboard-join]").addEventListener("click", openCloudSetup);
 }
 
 function render() {
