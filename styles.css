@@ -155,6 +155,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .permission-card h3 { margin: 0; font-size: 16px; }
 .permission-card p { margin: 5px 0 0; color: rgba(255,255,255,.78); font-size: 12px; line-height: 1.5; }
 .permission-card .primary-button { flex: 0 0 auto; color: #276b5d; background: #fffaf1; }
+.cloud-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 15px; border: 1px solid #b8dfe8; border-radius: 20px; background: #eef9fb; }
+.cloud-card h3 { margin: 0; font-size: 16px; }
+.cloud-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.cloud-card-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+.cloud-card-actions .primary-button, .cloud-card-actions .secondary-button { min-height: 36px; padding: 8px 10px; font-size: 11px; }
 .install-card { margin-top: 15px; padding: 17px; border-radius: 20px; color: #fffaf1; background: #514b83; }
 .install-card h3 { margin: 0; font-size: 17px; }
 .install-card p { margin: 7px 0 13px; color: rgba(255,250,241,.78); font-size: 13px; line-height: 1.6; }
