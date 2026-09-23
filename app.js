@@ -4,27 +4,62 @@ const photoInput = document.querySelector("#photo-input");
 const taskSeed = [
   { id: "read", category: "学习", icon: "📚", title: "阅读 20 分钟", detail: "选一本喜欢的书，读完告诉家人一个新发现", points: 20, done: false },
   { id: "jump", category: "运动", icon: "🏃", title: "跳绳 50 次", detail: "可以分成 2 组完成，记得先热身", points: 15, done: false },
-  { id: "desk", category: "家务", icon: "🧺", title: "整理自己的书桌", detail: "让每一本书都找到自己的位置", points: 10, done: true },
+  { id: "desk", category: "家务", icon: "🧺", title: "整理自己的书桌", detail: "让每一本书都找到自己的位置", points: 10, done: false },
   { id: "craft", category: "手工", icon: "🎨", title: "做一张秋日卡片", detail: "画给家里的一个人，并写一句祝福", points: 25, done: false },
 ];
 
-const menuSeed = [
-  { emoji: "🍅", name: "番茄牛肉饭", reason: "酸甜口味很适合孩子，牛肉能补充蛋白质和铁，30 分钟就能上桌。", tags: ["不辣", "30 分钟", "孩子友好"], ingredients: ["牛肉", "番茄", "洋葱", "米饭"], steps: ["牛肉切片，用少量生抽和淀粉腌 10 分钟。", "番茄和洋葱炒出香味，加入牛肉翻炒。", "倒入少量清水焖 8 分钟，盖在热米饭上。"] },
-  { emoji: "🥚", name: "彩椒蒸蛋", reason: "软嫩好入口，颜色也很漂亮，适合全家一起吃，20 分钟可以完成。", tags: ["清淡", "20 分钟", "软嫩"], ingredients: ["鸡蛋", "彩椒", "虾仁", "葱花"], steps: ["鸡蛋加温水搅匀，过滤掉泡沫。", "加入彩椒丁和虾仁，盖上保鲜膜。", "水开后蒸 10 分钟，撒上葱花即可。"] },
-  { emoji: "🍗", name: "蜂蜜鸡翅", reason: "孩子喜欢的甜香味，做法简单，适合把今天的晚餐变成一次小庆祝。", tags: ["微甜", "35 分钟", "家庭人气"], ingredients: ["鸡翅", "蜂蜜", "生抽", "西兰花"], steps: ["鸡翅两面划口，用生抽和姜片腌 15 分钟。", "平底锅煎到两面金黄，加入少量清水。", "收汁时加入蜂蜜，搭配焯好的西兰花。"] },
+const rewardSeed = [
+  { id: "movie", title: "家庭电影之夜 🎬", description: "全家一起选一部电影，准备喜欢的小零食", points: 100 },
+  { id: "dessert", title: "周末甜品时间 🍰", description: "和家人一起做或挑选一份甜品", points: 200 },
+  { id: "outing", title: "家庭公园探险 🌳", description: "选择一个周末目的地，来一次小小出发", points: 350 },
 ];
 
-const state = {
-  view: "home",
-  filter: "全部",
-  tasks: load("family_tasks", taskSeed),
-  points: Number(load("family_points", 125)),
-  menuIndex: Number(load("family_menu", 0)),
-  photo: load("family_photo", ""),
-  rating: Number(load("family_rating", 0)),
-};
+const adminSeed = [
+  { id: "grandpa", name: "爷爷", role: "成员" },
+  { id: "grandma", name: "奶奶", role: "成员" },
+  { id: "dad", name: "爸爸", role: "成员" },
+  { id: "mom", name: "妈妈", role: "成员" },
+  { id: "mochen", name: "墨晨", role: "成员" },
+];
+
+const menuSeed = [
+  {
+    name: "秋日护胃三菜一汤", season: "秋季", weather: "昼夜温差大", audience: "7 岁孩子 + 两位老人 + 爸爸妈妈",
+    reason: "秋季昼夜温差大，家里有孩子和老人，今天用温热、少油、软嫩的组合照顾胃口：一份主食、一道优质蛋白、一道深色蔬菜和一碗汤，营养更完整。",
+    nutrition: "牛肉和鸡蛋提供蛋白质与铁，西兰花补充膳食纤维，菌菇汤增加水分；整体少盐少辣，方便孩子和老人咀嚼。",
+    tags: ["秋季", "少油少辣", "全家友好"],
+    dishes: [
+      { emoji: "🍅", name: "番茄牛肉烩饭", role: "主食 + 蛋白质", ingredients: ["牛肉", "番茄", "洋葱", "米饭"], steps: ["牛肉切片，用少量生抽和淀粉腌 10 分钟。", "番茄和洋葱炒出香味，加入牛肉翻炒。", "倒入少量清水焖 8 分钟，盖在热米饭上。"] },
+      { emoji: "🥦", name: "蒜香西兰花", role: "深色蔬菜", ingredients: ["西兰花", "蒜末", "少量橄榄油"], steps: ["西兰花掰小朵，焯水 2 分钟。", "锅中少油炒香蒜末，加入西兰花快速翻匀。"] },
+      { emoji: "🍲", name: "菌菇豆腐汤", role: "补水 + 植物蛋白", ingredients: ["嫩豆腐", "香菇", "金针菇", "葱花"], steps: ["菌菇切片，与清水一起煮 6 分钟。", "加入嫩豆腐，小火煮 4 分钟，少量盐调味。"] },
+    ],
+  },
+  {
+    name: "秋雨天暖身组合", season: "秋季", weather: "阴雨湿凉", audience: "7 岁孩子 + 两位老人 + 爸爸妈妈",
+    reason: "遇到阴雨湿凉的天气，推荐热汤搭配软嫩菜肴，减少油炸和生冷，让孩子吃得下、老人胃里也舒服。",
+    nutrition: "鸡肉、虾仁提供优质蛋白，南瓜提供温和碳水和维生素，汤品帮助补充水分；味道清淡，家人可以按需加醋或胡椒。",
+    tags: ["秋雨天", "热汤", "软嫩易嚼"],
+    dishes: [
+      { emoji: "🍗", name: "南瓜鸡肉焖饭", role: "主食 + 蛋白质", ingredients: ["鸡腿肉", "南瓜", "胡萝卜", "米饭"], steps: ["鸡肉切丁，南瓜和胡萝卜切小块。", "全部与米饭同煮，出锅前焖 5 分钟。"] },
+      { emoji: "🥚", name: "彩椒虾仁蒸蛋", role: "软嫩蛋白质", ingredients: ["鸡蛋", "虾仁", "彩椒", "温水"], steps: ["鸡蛋加温水搅匀，过滤掉泡沫。", "加入虾仁和彩椒丁，水开后蒸 10 分钟。"] },
+      { emoji: "🥕", name: "玉米胡萝卜鸡汤", role: "热汤 + 蔬菜", ingredients: ["鸡架", "玉米", "胡萝卜", "姜片"], steps: ["鸡架焯水后加玉米、胡萝卜和姜片。", "小火炖 35 分钟，撇去浮油再调味。"] },
+    ],
+  },
+  {
+    name: "晴朗干燥补水组合", season: "秋季", weather: "晴朗干燥", audience: "7 岁孩子 + 两位老人 + 爸爸妈妈",
+    reason: "晴朗干燥时，餐桌加入含水量高的蔬菜和清汤，搭配易消化的鱼肉，减少口干和过重的调味。",
+    nutrition: "鱼肉提供优质蛋白和不饱和脂肪，冬瓜和菠菜补水补纤维，芝麻提供钙和香气；适合活动量普通的家庭晚餐。",
+    tags: ["晴朗干燥", "补水", "清淡"],
+    dishes: [
+      { emoji: "🐟", name: "清蒸鳕鱼", role: "优质蛋白质", ingredients: ["鳕鱼", "姜丝", "葱丝"], steps: ["鳕鱼擦干，放姜丝蒸 8—10 分钟。", "出锅后去刺，淋少量蒸鱼豉油。"] },
+      { emoji: "🥣", name: "冬瓜虾皮汤", role: "补水蔬菜汤", ingredients: ["冬瓜", "虾皮", "香菜", "姜片"], steps: ["冬瓜切片，加姜片煮至半透明。", "放少量虾皮，关火后撒香菜。"] },
+      { emoji: "🥬", name: "芝麻菠菜", role: "深色蔬菜 + 钙", ingredients: ["菠菜", "白芝麻", "香油"], steps: ["菠菜焯水后切段，挤去多余水分。", "拌入熟芝麻和几滴香油即可。"] },
+    ],
+  },
+];
 
 const categories = ["全部", "学习", "运动", "家务", "手工"];
+const weatherOptions = ["昼夜温差大", "阴雨湿凉", "晴朗干燥"];
 const navItems = [
   { id: "home", label: "家", icon: "⌂" },
   { id: "tasks", label: "任务乐园", icon: "✦" },
@@ -32,69 +67,40 @@ const navItems = [
   { id: "mine", label: "我的", icon: "◯" },
 ];
 
-function load(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw === null ? fallback : JSON.parse(raw);
-  } catch { return fallback; }
+function clone(value) { return JSON.parse(JSON.stringify(value)); }
+function load(key, fallback) { try { const raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); } catch { return fallback; } }
+function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* local-only fallback */ } }
+function migrateData() {
+  if (Number(load("family_data_version", 0)) < 2) {
+    save("family_tasks", clone(taskSeed)); save("family_points", 0); save("family_rewards", clone(rewardSeed)); save("family_admin_users", clone(adminSeed)); save("family_data_version", 2);
+  }
 }
+migrateData();
 
-function save(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* local-only fallback */ }
-}
+const state = {
+  view: "home", filter: "全部", tasks: load("family_tasks", clone(taskSeed)), points: Number(load("family_points", 0)), rewards: load("family_rewards", clone(rewardSeed)), adminUsers: load("family_admin_users", clone(adminSeed)), role: "超管", menuIndex: Number(load("family_menu", 0)), weather: load("family_weather", weatherOptions[0]), photo: load("family_photo", ""), rating: Number(load("family_rating", 0)),
+};
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
-}
-
+function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
+function canManage() { return state.role === "超管" || state.role === "管理员"; }
 function currentMenu() { return menuSeed[state.menuIndex % menuSeed.length]; }
 function completedCount() { return state.tasks.filter((task) => task.done).length; }
-function progressPercent() { return Math.round((completedCount() / state.tasks.length) * 100); }
+function progressPercent() { return state.tasks.length ? Math.round((completedCount() / state.tasks.length) * 100) : 0; }
+function nextReward() { return state.rewards.find((reward) => state.points < reward.points) || state.rewards[state.rewards.length - 1]; }
+
+function renderMenuDishes(menu) {
+  return menu.dishes.map((dish) => `<article class="dish-item"><div class="dish-item-head"><span class="dish-emoji">${dish.emoji}</span><div><h3>${escapeHtml(dish.name)}</h3><p>${escapeHtml(dish.role)}</p></div></div><div class="ingredients">${dish.ingredients.map((item) => `<span class="ingredient">${escapeHtml(item)}</span>`).join("")}</div><ol class="steps">${dish.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></article>`).join("");
+}
 
 function render() {
-  const menu = currentMenu();
-  const tasks = state.filter === "全部" ? state.tasks : state.tasks.filter((task) => task.category === state.filter);
+  const menu = currentMenu(); const tasks = state.filter === "全部" ? state.tasks : state.tasks.filter((task) => task.category === state.filter); const reward = nextReward();
   app.innerHTML = `
-    <div class="app-shell">
-      <div class="phone-frame">
-        <header class="topbar">
-          <div class="brand"><div class="brand-mark">✦</div><div class="brand-text"><strong>家里有光</strong><span>家庭小乐园</span></div></div>
-          <button class="profile-button" data-nav="mine" aria-label="打开我的设置"><span class="avatar">🧒</span><span>墨晨一家</span></button>
-        </header>
-
-        <section class="view ${state.view === "home" ? "active" : ""}" data-view="home">
-          <div class="eyebrow">星期三 · 9 月 23 日</div>
-          <h1 class="view-title">下午好，墨晨一家<br />今天也一起发光吧。</h1>
-          <div class="home-grid">
-            <article class="hero-card"><h1>完成一个小任务，<br />打开今天的惊喜。</h1><p>每一次行动都会变成成长能量。先从最简单的一件事开始吧。</p><button class="hero-action" data-nav="tasks">去看看任务 <span>→</span></button></article>
-            <div><div class="section-heading"><h2>墨晨的今日进度</h2><button data-nav="tasks">查看全部</button></div><div class="progress-card"><div class="progress-top"><strong>${completedCount()} / ${state.tasks.length} 个任务</strong><span>✦ ${state.points} 星星</span></div><div class="progress-track" style="--progress:${progressPercent()}%"><i></i></div><div class="progress-meta"><span>连续完成 <b>3 天</b></span><span>${progressPercent() === 100 ? "今日全完成！" : "再完成一个就升级"}</span></div></div></div>
-            <div><div class="section-heading"><h2>今日推荐菜单</h2><button data-nav="menu">打开菜单</button></div><button class="menu-preview" data-nav="menu"><span class="dish-visual">${menu.emoji}</span><span><h3>${menu.name}</h3><p>${menu.reason}</p></span></button></div>
-          </div>
-          <div class="section-heading"><h2>快速操作</h2></div><div class="quick-grid"><button class="quick-button" data-nav="tasks"><span>✦</span><b>给墨晨布置任务<small>学习、运动、家务、手工</small></b></button><button class="quick-button" data-action="voice"><span>🎙️</span><b>告诉我想吃什么<small>说一句话，重新推荐</small></b></button></div>
-        </section>
-
-        <section class="view ${state.view === "tasks" ? "active" : ""}" data-view="tasks">
-          <div class="eyebrow">今日成长能量</div><h1 class="view-title">任务乐园</h1>
-          <div class="points-banner"><div><small>墨晨的成长星星</small><strong>${state.points}</strong></div><span class="trophy">🏆</span></div>
-          <div class="section-heading"><h2>今天挑战什么？</h2><span class="rating-caption">完成后会获得星星</span></div>
-          <div class="filter-row">${categories.map((category) => `<button class="filter-chip ${state.filter === category ? "active" : ""}" data-filter="${category}">${category}</button>`).join("")}</div>
-          <div class="task-list">${tasks.map((task) => `<button class="task-card ${task.done ? "done" : ""}" data-task="${task.id}"><span class="task-icon">${task.icon}</span><span><h3>${task.title}</h3><p>${task.detail}</p></span><span><span class="task-points">${task.points}</span><span class="task-check">✓</span></span></button>`).join("")}</div>
-          <div class="section-heading"><h2>下一份奖励</h2></div><div class="reward-card"><span><h3>家庭电影之夜 🎬</h3><p>再获得 ${Math.max(0, 200 - state.points)} 星星就可以兑换</p></span><button class="reward-button" data-action="reward">查看奖励</button></div>
-        </section>
-
-        <section class="view ${state.view === "menu" ? "active" : ""}" data-view="menu">
-          <div class="eyebrow">今天吃点什么</div><h1 class="view-title">今日菜单</h1>
-          <article class="menu-card"><div class="menu-card-header"><div><h3>${menu.name}</h3><p>今天的第一推荐</p></div><span class="dish-badge">${menu.tags[0]}</span></div><div class="menu-large-visual">${menu.emoji}</div><div class="reason-box"><b>为什么推荐？</b><br />${menu.reason}</div><div class="ingredients">${menu.tags.map((tag) => `<span class="ingredient">${tag}</span>`).join("")}</div><div class="section-heading" style="margin-top:18px"><h2>简单做法</h2><span class="rating-caption">约 ${menu.tags[1].replace(" 分钟", " 分钟")}</span></div><ol class="steps">${menu.steps.map((step) => `<li>${step}</li>`).join("")}</ol><div class="menu-actions"><button class="secondary-button" data-action="regenerate">换一道</button><button class="primary-button" data-action="photo">上传成品照</button></div><button class="voice-button" data-action="voice">🎙️ 说说你的想法，重新推荐</button></article>
-          <div class="section-heading"><h2>今日厨神</h2><span class="rating-caption">做完记得来打分</span></div><div class="photo-review"><h3>上传成品照片，给这道菜加一点掌声</h3><div class="photo-preview">${state.photo ? `<img src="${state.photo}" alt="今日菜品成品照片" />` : "点击下方按钮上传照片"}</div><div class="rating-row"><div class="stars">${[1,2,3,4,5].map((n) => `<button class="${state.rating >= n ? "active" : ""}" data-rating="${n}" aria-label="${n} 星">★</button>`).join("")}</div><span class="rating-caption">${state.rating ? `${state.rating} 星 · 家庭鼓励中` : "还没有评分"}</span></div><button class="secondary-button" data-action="photo">${state.photo ? "更换成品照片" : "拍一张成品照"}</button></div>
-        </section>
-
-        <section class="view ${state.view === "mine" ? "active" : ""}" data-view="mine">
-          <div class="eyebrow">墨晨一家</div><h1 class="view-title">我的</h1><div class="settings-card"><div class="setting-row"><span><strong>家庭成员</strong><small>爷爷 · 奶奶 · 爸爸 · 妈妈 · 墨晨</small></span><span class="setting-value">5 人</span></div><div class="setting-row"><span><strong>孩子模式</strong><small>大图标、鼓励反馈、少文字</small></span><span class="setting-value">已开启</span></div><div class="setting-row"><span><strong>语音入口</strong><small>支持说出想吃什么</small></span><span class="setting-value">可用</span></div></div><div class="install-card"><h3>把家里有光放到手机桌面</h3><p>安装后像普通 App 一样打开，任务和菜单也能在没有网络时继续查看。</p><button data-action="install">添加到手机</button></div><div class="section-heading"><h2>关于这个家</h2></div><div class="empty-card" style="padding:17px;border-radius:20px"><p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">这是第一版家庭小乐园。之后可以继续加入家庭相册、健康提醒、共享日历和采购清单。</p></div>
-        </section>
-      </div>
-    </div>
-    <nav class="bottom-nav" aria-label="主导航"><div class="bottom-nav-inner">${navItems.map((item) => `<button class="nav-button ${state.view === item.id ? "active" : ""}" data-nav="${item.id}"><span class="nav-icon">${item.icon}</span><span>${item.label}</span></button>`).join("")}</div></nav>
-  `;
+    <div class="app-shell"><div class="phone-frame"><header class="topbar"><div class="brand"><div class="brand-mark">✦</div><div class="brand-text"><strong>家里有光</strong><span>家庭小乐园</span></div></div><button class="profile-button" data-nav="mine" aria-label="打开我的设置"><span class="avatar">🧒</span><span>墨晨一家</span></button></header>
+      <section class="view ${state.view === "home" ? "active" : ""}" data-view="home"><div class="eyebrow">星期三 · 9 月 23 日</div><h1 class="view-title">下午好，墨晨一家<br />今天也一起发光吧。</h1><div class="home-grid"><article class="hero-card"><h1>完成一个小任务，<br />打开今天的惊喜。</h1><p>每一次行动都会变成成长能量。先从最简单的一件事开始吧。</p><button class="hero-action" data-nav="tasks">去看看任务 <span>→</span></button></article><div><div class="section-heading"><h2>墨晨的今日进度</h2><button data-nav="tasks">查看全部</button></div><div class="progress-card"><div class="progress-top"><strong>${completedCount()} / ${state.tasks.length} 个任务</strong><span>✦ ${state.points} 星星</span></div><div class="progress-track" style="--progress:${progressPercent()}%"><i></i></div><div class="progress-meta"><span>连续完成 <b>0 天</b></span><span>${progressPercent() === 100 ? "今日全完成！" : "再完成一个就升级"}</span></div></div></div><div><div class="section-heading"><h2>今日推荐菜单</h2><button data-nav="menu">打开菜单</button></div><button class="menu-preview" data-nav="menu"><span class="dish-visual">${menu.dishes[0].emoji}</span><span><h3>${escapeHtml(menu.name)}</h3><p>${menu.dishes.length} 道搭配 · ${escapeHtml(menu.weather)} · ${escapeHtml(menu.reason)}</p></span></button></div></div><div class="section-heading"><h2>快速操作</h2></div><div class="quick-grid"><button class="quick-button" data-nav="tasks"><span>✦</span><b>给墨晨布置任务<small>学习、运动、家务、手工</small></b></button><button class="quick-button" data-action="voice"><span>🎙️</span><b>告诉我想吃什么<small>说一句话，重新推荐</small></b></button></div></section>
+      <section class="view ${state.view === "tasks" ? "active" : ""}" data-view="tasks"><div class="eyebrow">今日成长能量</div><h1 class="view-title">任务乐园</h1><div class="points-banner"><div><small>墨晨的成长星星</small><strong>${state.points}</strong></div><span class="trophy">🏆</span></div><div class="section-heading"><h2>今天挑战什么？</h2><span class="rating-caption">完成后会获得星星</span></div><div class="filter-row">${categories.map((category) => `<button class="filter-chip ${state.filter === category ? "active" : ""}" data-filter="${category}">${category}</button>`).join("")}</div>${canManage() ? `<div class="admin-toolbar"><span>🔐 ${state.role}可编辑任务和奖励</span><button data-action="new-task">新建任务</button><button data-action="rewards">奖励设置</button></div>` : ""}<div class="task-list">${tasks.map((task) => `<div class="task-row"><button class="task-card ${task.done ? "done" : ""}" data-task="${task.id}"><span class="task-icon">${escapeHtml(task.icon)}</span><span><h3>${escapeHtml(task.title)}</h3><p>${escapeHtml(task.detail)}</p></span><span><span class="task-points">${task.points}</span><span class="task-check">✓</span></span></button>${canManage() ? `<button class="task-edit-button" data-edit-task="${task.id}">编辑</button>` : ""}</div>`).join("")}</div><div class="section-heading"><h2>星星阶梯奖励</h2><span class="rating-caption">${reward ? `下一档：${reward.points} 星` : ""}</span></div><div class="reward-ladder">${state.rewards.map((item) => `<div class="reward-tier ${state.points >= item.points ? "reached" : ""}"><span><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.description)}</small></span><strong>${item.points} 星</strong></div>`).join("")}</div><div class="reward-card"><span><h3>${reward ? escapeHtml(reward.title) : "继续保持"}</h3><p>${reward ? `还差 ${Math.max(0, reward.points - state.points)} 星星 · ${escapeHtml(reward.description)}` : "所有奖励都已解锁"}</p></span><button class="reward-button" data-action="reward">查看奖励</button></div></section>
+      <section class="view ${state.view === "menu" ? "active" : ""}" data-view="menu"><div class="eyebrow">今天吃点什么</div><h1 class="view-title">今日菜单</h1><article class="menu-card"><div class="menu-card-header"><div><h3>${escapeHtml(menu.name)}</h3><p>组合推荐 · ${escapeHtml(menu.season)} · ${escapeHtml(menu.weather)}</p></div><span class="dish-badge">${escapeHtml(menu.tags[0])}</span></div><div class="menu-context"><span>🌤️ ${escapeHtml(menu.weather)}</span><span>👨‍👩‍👧‍👦 ${escapeHtml(menu.audience)}</span><button data-action="weather">切换天气</button></div><div class="menu-large-visual">${menu.dishes.map((dish) => dish.emoji).join(" ")}</div><div class="reason-box"><b>为什么推荐这组？</b><br />${escapeHtml(menu.reason)}<br /><span class="nutrition-note">营养提示：${escapeHtml(menu.nutrition)}</span></div><div class="menu-dishes">${renderMenuDishes(menu)}</div><div class="menu-actions"><button class="secondary-button" data-action="regenerate">换一组</button><button class="primary-button" data-action="photo">上传成品照</button></div><button class="voice-button" data-action="voice">🎙️ 说说你的想法，重新推荐</button></article><div class="section-heading"><h2>今日厨神</h2><span class="rating-caption">做完记得来打分</span></div><div class="photo-review"><h3>上传成品照片，给这组菜加一点掌声</h3><div class="photo-preview">${state.photo ? `<img src="${state.photo}" alt="今日菜品成品照片" />` : "点击下方按钮上传照片"}</div><div class="rating-row"><div class="stars">${[1,2,3,4,5].map((n) => `<button class="${state.rating >= n ? "active" : ""}" data-rating="${n}" aria-label="${n} 星">★</button>`).join("")}</div><span class="rating-caption">${state.rating ? `${state.rating} 星 · 家庭鼓励中` : "还没有评分"}</span></div><button class="secondary-button" data-action="photo">${state.photo ? "更换成品照片" : "拍一张成品照"}</button></div></section>
+      <section class="view ${state.view === "mine" ? "active" : ""}" data-view="mine"><div class="eyebrow">墨晨一家</div><h1 class="view-title">我的</h1><div class="settings-card"><div class="setting-row"><span><strong>家庭成员</strong><small>爷爷 · 奶奶 · 爸爸 · 妈妈 · 墨晨</small></span><span class="setting-value">5 人</span></div><div class="setting-row"><span><strong>当前权限</strong><small>可以管理任务、奖励和家庭管理员</small></span><span class="setting-value">${state.role}</span></div><div class="setting-row"><span><strong>语音入口</strong><small>参考微信式录音、识别、发送反馈</small></span><span class="setting-value">可用</span></div></div>${canManage() ? `<div class="permission-card"><div><h3>家庭权限管理</h3><p>超管可以给家人开放或收回管理员权限。</p></div><button class="primary-button" data-action="permissions">管理权限</button></div>` : ""}<div class="install-card"><h3>把家里有光放到手机桌面</h3><p>安装后像普通 App 一样打开，任务和菜单也能在没有网络时继续查看。</p><button data-action="install">添加到手机</button></div><div class="section-heading"><h2>关于这个家</h2></div><div class="empty-card" style="padding:17px;border-radius:20px"><p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">这是第一版家庭小乐园。之后可以继续加入家庭相册、健康提醒、共享日历和采购清单。</p></div></section>
+    </div></div><nav class="bottom-nav" aria-label="主导航"><div class="bottom-nav-inner">${navItems.map((item) => `<button class="nav-button ${state.view === item.id ? "active" : ""}" data-nav="${item.id}"><span class="nav-icon">${item.icon}</span><span>${item.label}</span></button>`).join("")}</div></nav>`;
   bindEvents();
 }
 
@@ -102,104 +108,92 @@ function bindEvents() {
   app.querySelectorAll("[data-nav]").forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.nav; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }));
   app.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => { state.filter = button.dataset.filter; render(); }));
   app.querySelectorAll("[data-task]").forEach((button) => button.addEventListener("click", () => completeTask(button.dataset.task)));
-  app.querySelectorAll("[data-rating]").forEach((button) => button.addEventListener("click", () => { state.rating = Number(button.dataset.rating); save("family_rating", state.rating); render(); showToast(`已给今日菜品 ${state.rating} 星鼓励 ✨`); }));
+  app.querySelectorAll("[data-edit-task]").forEach((button) => button.addEventListener("click", () => openTaskEditor(button.dataset.editTask)));
+  app.querySelectorAll("[data-rating]").forEach((button) => button.addEventListener("click", () => { state.rating = Number(button.dataset.rating); save("family_rating", state.rating); render(); showToast(`已给今日组合 ${state.rating} 星鼓励 ✨`); }));
   app.querySelectorAll("[data-action=voice]").forEach((button) => button.addEventListener("click", startVoice));
   app.querySelectorAll("[data-action=regenerate]").forEach((button) => button.addEventListener("click", startVoice));
   app.querySelectorAll("[data-action=photo]").forEach((button) => button.addEventListener("click", () => photoInput.click()));
   app.querySelectorAll("[data-action=install]").forEach((button) => button.addEventListener("click", installApp));
-  app.querySelectorAll("[data-action=reward]").forEach((button) => button.addEventListener("click", () => showToast("继续完成任务，攒够 200 星星就能兑换家庭电影之夜！")));
+  app.querySelectorAll("[data-action=reward]").forEach((button) => button.addEventListener("click", () => showToast("继续完成任务，解锁下一档家庭奖励吧！")));
+  app.querySelectorAll("[data-action=new-task]").forEach((button) => button.addEventListener("click", () => openTaskEditor()));
+  app.querySelectorAll("[data-action=rewards]").forEach((button) => button.addEventListener("click", openRewardEditor));
+  app.querySelectorAll("[data-action=permissions]").forEach((button) => button.addEventListener("click", openPermissionEditor));
+  app.querySelectorAll("[data-action=weather]").forEach((button) => button.addEventListener("click", () => { const index = weatherOptions.indexOf(state.weather); state.weather = weatherOptions[(index + 1) % weatherOptions.length]; save("family_weather", state.weather); state.menuIndex = weatherOptions.indexOf(state.weather) % menuSeed.length; save("family_menu", state.menuIndex); render(); showToast(`已按“${state.weather}”重新推荐`); }));
 }
 
 function completeTask(id) {
-  const task = state.tasks.find((item) => item.id === id);
-  if (!task) return;
-  task.done = !task.done;
-  state.points = Math.max(0, state.points + (task.done ? task.points : -task.points));
-  save("family_tasks", state.tasks); save("family_points", state.points); render();
-  showToast(task.done ? `太棒了！获得 ${task.points} 颗成长星星 ✨` : "已取消这次完成记录");
+  const task = state.tasks.find((item) => item.id === id); if (!task) return;
+  task.done = !task.done; state.points = Math.max(0, state.points + (task.done ? Number(task.points) : -Number(task.points)));
+  save("family_tasks", state.tasks); save("family_points", state.points); render(); showToast(task.done ? `太棒了！获得 ${task.points} 颗成长星星 ✨` : "已取消这次完成记录");
+}
+
+function openTaskEditor(id = "") {
+  if (!canManage()) return;
+  const task = state.tasks.find((item) => item.id === id) || { id: "", icon: "✦", category: "学习", title: "", detail: "", points: 10 };
+  const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
+  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="编辑任务"><h2>${id ? "编辑任务" : "新建任务"}</h2><p>设置孩子看得懂、做得到的任务，并调整完成后的星星数量。</p><div class="form-grid"><label>任务名称<input id="task-title" value="${escapeHtml(task.title)}" placeholder="例如：阅读 20 分钟" /></label><label>任务描述<textarea id="task-detail" placeholder="告诉孩子怎么完成">${escapeHtml(task.detail)}</textarea></label><label>分类<select id="task-category">${categories.slice(1).map((item) => `<option ${task.category === item ? "selected" : ""}>${item}</option>`).join("")}</select></label><label>图标<input id="task-icon" value="${escapeHtml(task.icon)}" maxlength="2" /></label><label>完成奖励星星<input id="task-points" type="number" min="0" max="999" value="${Number(task.points) || 0}" /></label></div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存任务</button></div></div>`;
+  document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { const title = wrapper.querySelector("#task-title").value.trim(); if (!title) { wrapper.querySelector("#task-title").focus(); return; } const nextTask = { id: task.id || `task-${Date.now()}`, category: wrapper.querySelector("#task-category").value, icon: wrapper.querySelector("#task-icon").value.trim() || "✦", title, detail: wrapper.querySelector("#task-detail").value.trim() || "完成后告诉家人你的感受", points: Math.max(0, Number(wrapper.querySelector("#task-points").value) || 0), done: Boolean(task.done) }; const index = state.tasks.findIndex((item) => item.id === nextTask.id); if (index >= 0) state.tasks[index] = nextTask; else state.tasks.push(nextTask); save("family_tasks", state.tasks); wrapper.remove(); render(); showToast("任务已保存"); });
+}
+
+function openRewardEditor() {
+  if (!canManage()) return;
+  const rows = [...state.rewards, { id: "new", title: "", description: "", points: "" }]; const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
+  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="设置阶梯奖励"><h2>奖励与星星设置</h2><p>每一档都可以自定义奖励名称、说明和需要的星星数量。留空的新增档位不会保存。</p><div class="reward-editor-list">${rows.map((item, index) => `<div class="reward-editor-row" data-reward-row="${index}"><input data-reward-title placeholder="奖励名称" value="${escapeHtml(item.title)}" /><input data-reward-description placeholder="奖励说明" value="${escapeHtml(item.description)}" /><input data-reward-points type="number" min="1" placeholder="星星" value="${item.points}" /></div>`).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存阶梯奖励</button></div></div>`;
+  document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { const rewards = Array.from(wrapper.querySelectorAll("[data-reward-row]")).map((row, index) => ({ id: state.rewards[index]?.id || `reward-${Date.now()}-${index}`, title: row.querySelector("[data-reward-title]").value.trim(), description: row.querySelector("[data-reward-description]").value.trim(), points: Number(row.querySelector("[data-reward-points]").value) || 0 })).filter((item) => item.title && item.points > 0).sort((a, b) => a.points - b.points); if (!rewards.length) return; state.rewards = rewards; save("family_rewards", state.rewards); wrapper.remove(); render(); showToast("阶梯奖励已更新"); });
+}
+
+function openPermissionEditor() {
+  if (!canManage()) return;
+  const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
+  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="家庭权限管理"><h2>家庭权限管理</h2><p>超管可以开放管理员权限。管理员可以编辑任务和奖励，但不能管理其他管理员。</p><div class="permission-list">${state.adminUsers.map((user) => `<label class="permission-row"><span><b>${escapeHtml(user.name)}</b><small>${user.id === "mochen" ? "孩子账号" : "家庭成员"}</small></span><select data-user-role="${user.id}"><option ${user.role === "成员" ? "selected" : ""}>成员</option><option ${user.role === "管理员" ? "selected" : ""}>管理员</option></select></label>`).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存权限</button></div></div>`;
+  document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { wrapper.querySelectorAll("[data-user-role]").forEach((select) => { const user = state.adminUsers.find((item) => item.id === select.dataset.userRole); if (user) user.role = select.value; }); save("family_admin_users", state.adminUsers); wrapper.remove(); render(); showToast("家庭权限已更新"); });
 }
 
 function startVoice() {
-  if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new Recognition();
-    recognition.lang = "zh-CN"; recognition.interimResults = false; recognition.maxAlternatives = 1;
-    const button = document.querySelector("[data-action=voice]");
-    if (button) { button.classList.add("listening"); button.textContent = "🎙️ 正在听…说说你想吃什么"; }
-    recognition.onresult = (event) => regenerateMenu(event.results[0][0].transcript);
-    recognition.onerror = () => showVoiceModal("没有听清，可以再说一次吗？例如：不要辣，想吃鸡翅");
-    recognition.onend = () => { if (button) button.classList.remove("listening"); };
-    recognition.start();
-  } else showVoiceModal();
-}
-
-function showVoiceModal(message = "告诉我口味、食材或时间，例如：不要辣，想吃鸡翅，30 分钟内做好") {
-  const wrapper = document.createElement("div");
-  wrapper.className = "modal-backdrop";
-  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="重新推荐菜单"><h2>你想吃什么？</h2><p>${message}</p><textarea id="menu-idea" placeholder="比如：家里有鸡蛋和番茄，想吃清淡一点的"></textarea><div class="modal-actions"><button class="secondary-button" data-close>先不换了</button><button class="primary-button" data-submit>重新推荐</button></div></div>`;
+  const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop voice-backdrop";
+  wrapper.innerHTML = `<div class="voice-sheet" role="dialog" aria-modal="true" aria-label="语音重新推荐菜单"><div class="voice-sheet-header"><div><span class="eyebrow">语音菜单</span><h2>说说你想吃什么</h2></div><button class="voice-close" data-voice-cancel aria-label="关闭">×</button></div><div class="voice-status" data-voice-status>正在准备录音…</div><div class="voice-wave" data-voice-wave><i></i><i></i><i></i><i></i><i></i></div><button class="voice-mic" data-voice-start aria-label="开始录音">🎙️</button><div class="voice-transcript" data-voice-transcript>例如：今天下雨，想吃热乎、清淡一点的</div><textarea class="voice-input" data-voice-input placeholder="也可以直接输入，再点击发送"></textarea><div class="modal-actions"><button class="secondary-button" data-voice-cancel>取消</button><button class="primary-button voice-send" data-voice-send disabled>发送并推荐</button></div><p class="voice-hint">像微信语音一样：录音中会有动态提示，识别完成后点击“发送并推荐”。</p></div>`;
   document.body.appendChild(wrapper);
-  wrapper.querySelector("textarea").focus();
-  wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
-  wrapper.querySelector("[data-submit]").addEventListener("click", () => { regenerateMenu(wrapper.querySelector("textarea").value || "换一道清淡的"); wrapper.remove(); });
+  const status = wrapper.querySelector("[data-voice-status]"), transcriptBox = wrapper.querySelector("[data-voice-transcript]"), input = wrapper.querySelector("[data-voice-input]"), mic = wrapper.querySelector("[data-voice-start]"), send = wrapper.querySelector("[data-voice-send]"), wave = wrapper.querySelector("[data-voice-wave]");
+  let transcript = ""; let recognition;
+  const supported = "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
+  const setTranscript = (value) => { transcript = value.trim(); transcriptBox.textContent = transcript || "例如：今天下雨，想吃热乎、清淡一点的"; send.disabled = !transcript && !input.value.trim(); };
+  const updateSendState = () => { send.disabled = !transcript && !input.value.trim(); };
+  if (supported) {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition; recognition = new Recognition(); recognition.lang = "zh-CN"; recognition.interimResults = true; recognition.maxAlternatives = 1;
+    recognition.onstart = () => { status.textContent = "正在录音…说完点击发送"; wave.classList.add("active"); mic.classList.add("recording"); mic.textContent = "⏺️"; };
+    recognition.onresult = (event) => { const text = Array.from(event.results).map((result) => result[0].transcript).join(""); setTranscript(text); status.textContent = event.results[event.results.length - 1].isFinal ? "已识别，点击发送" : "正在识别…"; };
+    recognition.onerror = () => { status.textContent = "没有听清，可以再说一次或直接输入"; wave.classList.remove("active"); mic.classList.remove("recording"); mic.textContent = "🎙️"; };
+    recognition.onend = () => { wave.classList.remove("active"); mic.classList.remove("recording"); mic.textContent = "🎙️"; if (transcript) status.textContent = "已识别，点击发送"; };
+    mic.addEventListener("click", () => { try { recognition.start(); } catch { status.textContent = "录音已经开始，请说完后发送"; } });
+    try { recognition.start(); } catch { status.textContent = "点击麦克风开始录音"; }
+  } else { status.textContent = "当前浏览器不支持语音识别，可直接输入后发送"; mic.style.display = "none"; wave.style.display = "none"; input.focus(); }
+  input.addEventListener("input", updateSendState);
+  wrapper.querySelectorAll("[data-voice-cancel]").forEach((button) => button.addEventListener("click", () => { try { recognition?.stop(); } catch {} wrapper.remove(); }));
+  send.addEventListener("click", () => { const value = transcript || input.value.trim(); if (!value) return; status.textContent = "已发送，正在为你生成组合菜单…"; send.disabled = true; mic.disabled = true; wave.classList.remove("active"); setTimeout(() => { wrapper.remove(); regenerateMenu(value); }, 500); });
 }
 
 function regenerateMenu(idea = "") {
-  const text = String(idea);
-  let next = (state.menuIndex + 1) % menuSeed.length;
-  if (text.includes("鸡翅")) next = 2;
-  if (text.includes("鸡蛋") || text.includes("番茄") || text.includes("清淡")) next = 1;
-  state.menuIndex = next; save("family_menu", state.menuIndex); state.view = "menu"; render(); showToast(`收到你的想法，已换成「${currentMenu().name}」`);
-  return currentMenu();
+  const text = String(idea); let next = (state.menuIndex + 1) % menuSeed.length;
+  if (text.includes("雨") || text.includes("汤") || text.includes("暖")) next = 1;
+  if (text.includes("晴") || text.includes("干燥") || text.includes("鱼")) next = 2;
+  if (text.includes("清淡") || text.includes("孩子") || text.includes("老人")) next = 0;
+  state.menuIndex = next; save("family_menu", state.menuIndex); state.view = "menu"; render(); showToast(`已发送，换成「${currentMenu().name}」`); return currentMenu();
 }
 
-function showToast(text) {
-  document.querySelectorAll(".toast").forEach((item) => item.remove());
-  const toast = document.createElement("div"); toast.className = "toast"; toast.textContent = text; document.body.appendChild(toast);
-  window.setTimeout(() => toast.remove(), 2600);
-}
-
-photoInput.addEventListener("change", () => {
-  const file = photoInput.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => { state.photo = reader.result; save("family_photo", state.photo); state.view = "menu"; render(); showToast("成品照上传成功，给自己点个赞吧！"); };
-  reader.readAsDataURL(file);
-});
-
+function showToast(text) { document.querySelectorAll(".toast").forEach((item) => item.remove()); const toast = document.createElement("div"); toast.className = "toast"; toast.textContent = text; document.body.appendChild(toast); window.setTimeout(() => toast.remove(), 2800); }
+photoInput.addEventListener("change", () => { const file = photoInput.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { state.photo = reader.result; save("family_photo", state.photo); state.view = "menu"; render(); showToast("成品照上传成功，给自己点个赞吧！"); }; reader.readAsDataURL(file); });
 let deferredInstallPrompt;
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); deferredInstallPrompt = event; });
-async function installApp() {
-  if (!deferredInstallPrompt) { showToast("请在浏览器菜单中选择“添加到主屏幕”即可安装"); return; }
-  deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null;
-}
-
+async function installApp() { if (!deferredInstallPrompt) { showToast("请在浏览器菜单中选择“添加到主屏幕”即可安装"); return; } deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; }
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 
 function registerWebMcp() {
-  const context = document.modelContext;
-  if (!context?.registerTool) return;
-  const lifecycle = new AbortController();
-  void context.registerTool({
-    name: "complete_child_task",
-    title: "完成孩子任务",
-    description: "完成一个可见的孩子任务并增加对应的成长星星。",
-    inputSchema: { type: "object", properties: { taskId: { type: "string" } }, required: ["taskId"], additionalProperties: false },
-    annotations: { readOnlyHint: false, untrustedContentHint: false },
-    execute(input) {
-      const task = state.tasks.find((item) => item.id === input?.taskId);
-      if (!task) throw new Error("找不到这个任务");
-      if (!task.done) completeTask(task.id);
-      return { taskId: task.id, title: task.title, points: state.points, completed: task.done };
-    },
-  }, { signal: lifecycle.signal });
-  void context.registerTool({
-    name: "regenerate_daily_menu",
-    title: "重新推荐今日菜单",
-    description: "根据家庭成员说出的口味、食材或时间要求，更新页面上的今日菜单。",
-    inputSchema: { type: "object", properties: { preference: { type: "string" } }, required: ["preference"], additionalProperties: false },
-    annotations: { readOnlyHint: false, untrustedContentHint: true },
-    execute(input) { return regenerateMenu(input?.preference || "换一道"); },
-  }, { signal: lifecycle.signal });
+  const context = document.modelContext; if (!context?.registerTool) return; const lifecycle = new AbortController();
+  void context.registerTool({ name: "complete_child_task", title: "完成孩子任务", description: "完成一个可见的孩子任务并增加对应的成长星星。", inputSchema: { type: "object", properties: { taskId: { type: "string" } }, required: ["taskId"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute(input) { const task = state.tasks.find((item) => item.id === input?.taskId); if (!task) throw new Error("找不到这个任务"); if (!task.done) completeTask(task.id); return { taskId: task.id, title: task.title, points: state.points, completed: task.done }; } }, { signal: lifecycle.signal });
+  void context.registerTool({ name: "regenerate_daily_menu", title: "重新推荐今日组合菜单", description: "根据家庭成员说出的口味、食材、天气或时间要求，更新页面上的今日组合菜单。", inputSchema: { type: "object", properties: { preference: { type: "string" } }, required: ["preference"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: true }, execute(input) { return regenerateMenu(input?.preference || "换一组"); } }, { signal: lifecycle.signal });
   window.addEventListener("pagehide", () => lifecycle.abort(), { once: true });
 }
 
