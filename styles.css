@@ -148,7 +148,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .voice-button.listening { color: #fff; background: var(--coral); animation: pulse 1.15s ease-in-out infinite; }
 .photo-review { display: grid; gap: 12px; padding: 16px; border-radius: 20px; background: #e8f2ed; }
 .photo-review h3 { margin: 0; font-size: 16px; }
-.photo-preview { display: grid; place-items: center; min-height: 94px; border-radius: 15px; color: #69927f; background: rgba(255,255,255,.55); font-size: 13px; overflow: hidden; }
+.photo-preview { display: grid; place-items: center; min-height: 94px; border-radius: 15px; color: #69927f; background: rgba(255,255,255,.55); font-size: 13px; overflow: hidden; cursor: pointer; transition: transform .18s ease, background .18s ease; }.photo-preview:hover, .photo-preview:focus-visible { background: rgba(255,255,255,.82); transform: translateY(-1px); outline: 2px solid rgba(46,149,128,.26); outline-offset: 2px; }
 .photo-preview img { width: 100%; max-height: 210px; object-fit: cover; }
 .rating-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .stars { display: flex; gap: 2px; color: #d3c7b7; font-size: 22px; }
