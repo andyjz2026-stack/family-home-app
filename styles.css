@@ -176,6 +176,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .install-card h3 { margin: 0; font-size: 17px; }
 .install-card p { margin: 7px 0 13px; color: rgba(255,250,241,.78); font-size: 13px; line-height: 1.6; }
 .install-card button { padding: 10px 13px; border-radius: 12px; color: #39335d; background: #fffaf1; font-size: 12px; font-weight: 800; }
+.reset-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 14px 15px; border: 1px solid #efd4c7; border-radius: 20px; background: rgba(255,244,239,.82); }.reset-card h3 { margin: 0; font-size: 14px; }.reset-card p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }.reset-card .secondary-button { flex: 0 0 auto; min-height: 36px; padding: 8px 10px; font-size: 11px; }
 
 .bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; padding: 0 15px max(14px, env(safe-area-inset-bottom)); pointer-events: none; }
 .bottom-nav-inner { display: grid; grid-template-columns: repeat(4, 1fr); width: min(100%, 540px); padding: 7px; border: 1px solid rgba(221,209,190,.85); border-radius: 23px; background: rgba(255,250,242,.9); box-shadow: 0 8px 30px rgba(83,62,31,.16); backdrop-filter: blur(18px); pointer-events: auto; }
