@@ -315,7 +315,7 @@ function renderRewardLadder() {
   if (!state.rewards.length) return `<div class="empty-card reward-empty">还没有设置阶梯奖励</div>`;
   const maxPoints = Math.max(1, state.rewards[state.rewards.length - 1].points);
   const progress = Math.min(100, Math.round((state.points / maxPoints) * 100));
-  return `<div class="reward-progress"><div class="reward-progress-head"><span>成长进度</span><b>${state.points} / ${maxPoints} 星</b></div><div class="reward-track"><i style="width:${progress}%"></i></div><div class="reward-nodes">${state.rewards.map((item, index) => { const left = Math.min(96, Math.max(4, Math.round((item.points / maxPoints) * 100))); return `<button class="reward-node ${state.points >= item.points ? "reached" : ""}" style="left:${left}%" data-reward-detail="${index}" aria-label="查看 ${escapeHtml(item.title)} 奖励"><span class="reward-chest">🎁</span><small>${item.points}星</small></button>`; }).join("")}</div><div class="reward-labels">${state.rewards.map((item) => `<span>${escapeHtml(item.title)}</span>`).join("")}</div><p class="reward-progress-hint">点击宝箱查看奖励内容</p></div>`;
+  return `<div class="reward-progress"><div class="reward-progress-head"><span>累计进度</span><b>${state.points} 星</b></div><div class="reward-track"><i style="width:${progress}%"></i><div class="reward-nodes">${state.rewards.map((item, index) => { const left = Math.min(96, Math.max(4, Math.round((item.points / maxPoints) * 100))); return `<button class="reward-node ${state.points >= item.points ? "reached" : ""}" style="left:${left}%" data-reward-detail="${index}" aria-label="查看 ${item.points} 星礼盒奖励"><span class="reward-chest">🎁</span><small>${item.points}星</small></button>`; }).join("")}</div></div><p class="reward-progress-hint">点击礼盒查看具体奖励</p></div>`;
 }
 
 function canInvite() { return state.role === "超管"; }
@@ -324,6 +324,7 @@ const onboarding = { step: 1, familyName: "我们的家", memberCount: 5, displa
 
 async function shareInvite() {
   if (!canInvite()) { showToast("只有家庭创建者可以发送邀请"); return; }
+  if (!cloud.inviteCode) { showToast("家庭云端连接后才会生成邀请码"); return; }
   const message = `加入${cloud.familyName || "我的家庭"}，打开家庭应用后输入邀请码：${cloud.inviteCode}`;
   try {
     if (navigator.share) await navigator.share({ title: `${cloud.familyName || "家庭"}邀请`, text: message });
@@ -404,6 +405,13 @@ function bindEvents() {
   const photoCaption = app.querySelector(".photo-review .rating-caption"); if (photoCaption) photoCaption.textContent = state.rating ? `${state.rating} 星 · 系统自动评分` : "上传后自动评分";
   app.querySelector(".menu-context")?.remove(); app.querySelector(".dish-badge")?.remove();
   const menuMeta = app.querySelector(".menu-card-header p"); if (menuMeta) menuMeta.textContent = "根据家人年龄、季节和天气自动推荐";
+  if (mineView && canInvite()) {
+    const cloudCard = mineView.querySelector(".cloud-card");
+    cloudCard?.querySelector("[data-action=share-invite]")?.remove();
+    const inviteCard = document.createElement("div"); inviteCard.className = "invite-card";
+    inviteCard.innerHTML = `<div><h3>邀请家人加入</h3><p>${cloud.inviteCode ? `邀请码：<b>${escapeHtml(cloud.inviteCode)}</b>` : "连接家庭云端后会生成邀请码"}</p></div><button class="secondary-button" data-action="share-invite">${cloud.inviteCode ? "发送邀请码" : "查看邀请码"}</button>`;
+    cloudCard?.after(inviteCard);
+  }
   const taskView = app.querySelector('[data-view="tasks"]');
   if (taskView) {
     const taskEyebrow = taskView.querySelector(".eyebrow"); if (taskEyebrow) taskEyebrow.textContent = "任务库 · 每日打卡";
