@@ -167,9 +167,19 @@ function resetThisDeviceFamily() {
 if (!load("family_household_id", "")) {
   state.tasks = []; state.points = 0; state.rewards = []; state.menuIndex = 0; state.photo = ""; state.rating = 0;
 }
-state.tasks = state.tasks.map((task) => ({ ...task, category: task.category === "手工" ? "其他" : task.category, icon: categoryIcons[task.category === "手工" ? "其他" : task.category] || "✦" }));
+state.tasks = normalizeTasks(state.tasks);
 
 function taskIconForCategory(category) { return categoryIcons[category] || "✦"; }
+function todayKey(date = new Date()) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, "0"); const day = String(date.getDate()).padStart(2, "0"); return `${year}-${month}-${day}`; }
+function normalizeTask(task) {
+  const completedDates = Array.isArray(task.completedDates) ? [...new Set(task.completedDates.filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value)))] : [];
+  // 兼容旧版本只有 done 字段的任务：第一次升级时把当日完成记录迁移到日期列表。
+  if (task.done && !completedDates.length) completedDates.push(todayKey());
+  const category = task.category === "手工" ? "其他" : task.category;
+  return { ...task, category, icon: categoryIcons[category] || "✦", completedDates, done: completedDates.includes(todayKey()) };
+}
+function normalizeTasks(tasks) { return (Array.isArray(tasks) ? tasks : []).map(normalizeTask); }
+function refreshTaskDailyStatus() { const today = todayKey(); state.tasks = state.tasks.map((task) => ({ ...task, done: Array.isArray(task.completedDates) && task.completedDates.includes(today) })); }
 
 const supabaseClient = window.supabase && window.FAMILY_SUPABASE_CONFIG
   ? window.supabase.createClient(window.FAMILY_SUPABASE_CONFIG.url, window.FAMILY_SUPABASE_CONFIG.publishableKey)
@@ -210,7 +220,7 @@ async function ensureCloudAuth() {
 
 function applyCloudRow(row) {
   if (!row) return;
-  if (Array.isArray(row.tasks)) state.tasks = row.tasks;
+  if (Array.isArray(row.tasks)) state.tasks = normalizeTasks(row.tasks);
   if (Array.isArray(row.rewards)) state.rewards = row.rewards;
   if (typeof row.points === "number") state.points = row.points;
   if (typeof row.menu_index === "number") state.menuIndex = row.menu_index;
@@ -353,6 +363,7 @@ function renderSetup() {
 }
 
 function render() {
+  refreshTaskDailyStatus();
   applyTheme();
   if (!cloud.householdId) { renderSetup(); return; }
   const menu = currentMenu(); const tasks = state.filter === "全部" ? state.tasks : state.tasks.filter((task) => task.category === state.filter); const reward = nextReward();
@@ -393,6 +404,14 @@ function bindEvents() {
   const photoCaption = app.querySelector(".photo-review .rating-caption"); if (photoCaption) photoCaption.textContent = state.rating ? `${state.rating} 星 · 系统自动评分` : "上传后自动评分";
   app.querySelector(".menu-context")?.remove(); app.querySelector(".dish-badge")?.remove();
   const menuMeta = app.querySelector(".menu-card-header p"); if (menuMeta) menuMeta.textContent = "根据家人年龄、季节和天气自动推荐";
+  const taskView = app.querySelector('[data-view="tasks"]');
+  if (taskView) {
+    const taskEyebrow = taskView.querySelector(".eyebrow"); if (taskEyebrow) taskEyebrow.textContent = "任务库 · 每日打卡";
+    const pointsLabel = taskView.querySelector(".points-banner small"); if (pointsLabel) pointsLabel.textContent = "墨晨的累计成长星星";
+    const taskHint = taskView.querySelector(".section-heading .rating-caption"); if (taskHint) taskHint.textContent = "任务库里的任务，每天都能完成";
+    const rewardHeading = Array.from(taskView.querySelectorAll(".section-heading h2")).find((heading) => heading.textContent.includes("星星阶梯奖励"));
+    const rewardHint = rewardHeading?.parentElement.querySelector(".rating-caption"); if (rewardHint) rewardHint.textContent = `${state.points} 星 · 持续累计，不会每日清零`;
+  }
   app.querySelectorAll("[data-action=install]").forEach((button) => button.addEventListener("click", installApp));
   app.querySelectorAll("[data-action=reward]").forEach((button) => button.addEventListener("click", () => showToast("继续完成任务，解锁下一档家庭奖励吧！")));
   app.querySelectorAll("[data-reward-detail]").forEach((button) => button.addEventListener("click", () => { const reward = state.rewards[Number(button.dataset.rewardDetail)]; if (reward) showToast(`${reward.title}：${reward.description}（${reward.points} 星）`); }));
@@ -409,7 +428,11 @@ function bindEvents() {
 
 function completeTask(id) {
   const task = state.tasks.find((item) => item.id === id); if (!task) return;
-  task.done = !task.done; state.points = Math.max(0, state.points + (task.done ? Number(task.points) : -Number(task.points)));
+  const today = todayKey(); const completedDates = Array.isArray(task.completedDates) ? [...task.completedDates] : [];
+  const completedToday = completedDates.includes(today);
+  task.completedDates = completedToday ? completedDates.filter((date) => date !== today) : [...new Set([...completedDates, today])];
+  task.done = !completedToday;
+  state.points = Math.max(0, state.points + (task.done ? Number(task.points) : -Number(task.points)));
   save("family_tasks", state.tasks); save("family_points", state.points); void syncCloudState(); render(); showToast(task.done ? `太棒了！获得 ${task.points} 颗成长星星 ✨` : "已取消这次完成记录");
 }
 
@@ -419,7 +442,7 @@ function openTaskEditor(id = "") {
   const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
   wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="编辑任务"><h2>${id ? "编辑任务" : "新建任务"}</h2><p>选择任务类型后，系统会自动匹配图标，不需要额外设置。</p><div class="form-grid"><label>任务名称<input id="task-title" value="${escapeHtml(task.title)}" placeholder="例如：阅读 20 分钟" /></label><label>任务描述<textarea id="task-detail" placeholder="告诉孩子怎么完成">${escapeHtml(task.detail)}</textarea></label><label>分类<select id="task-category">${categories.slice(1).map((item) => `<option ${task.category === item ? "selected" : ""}>${item}</option>`).join("")}</select></label><label>完成奖励星星<input id="task-points" type="number" min="0" max="999" value="${Number(task.points) || 0}" /></label></div><div class="task-icon-preview" data-task-icon-preview>${taskIconForCategory(task.category)}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存任务</button></div></div>`;
   document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove()); wrapper.querySelector("#task-category").addEventListener("change", (event) => { wrapper.querySelector("[data-task-icon-preview]").textContent = taskIconForCategory(event.target.value); });
-  wrapper.querySelector("[data-save]").addEventListener("click", () => { const title = wrapper.querySelector("#task-title").value.trim(); if (!title) { wrapper.querySelector("#task-title").focus(); return; } const category = wrapper.querySelector("#task-category").value; const nextTask = { id: task.id || `task-${Date.now()}`, category, icon: taskIconForCategory(category), title, detail: wrapper.querySelector("#task-detail").value.trim() || "完成后告诉家人你的感受", points: Math.max(0, Number(wrapper.querySelector("#task-points").value) || 0), done: Boolean(task.done) }; const index = state.tasks.findIndex((item) => item.id === nextTask.id); if (index >= 0) state.tasks[index] = nextTask; else state.tasks.push(nextTask); save("family_tasks", state.tasks); void syncCloudState(); wrapper.remove(); render(); showToast("任务已保存"); });
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { const title = wrapper.querySelector("#task-title").value.trim(); if (!title) { wrapper.querySelector("#task-title").focus(); return; } const category = wrapper.querySelector("#task-category").value; const nextTask = normalizeTask({ id: task.id || `task-${Date.now()}`, category, icon: taskIconForCategory(category), title, detail: wrapper.querySelector("#task-detail").value.trim() || "完成后告诉家人你的感受", points: Math.max(0, Number(wrapper.querySelector("#task-points").value) || 0), completedDates: Array.isArray(task.completedDates) ? task.completedDates : [], done: Boolean(task.done) }); const index = state.tasks.findIndex((item) => item.id === nextTask.id); if (index >= 0) state.tasks[index] = nextTask; else state.tasks.push(nextTask); save("family_tasks", state.tasks); void syncCloudState(); wrapper.remove(); render(); showToast("任务库已保存，每天都可以重新完成"); });
 }
 
 function openRewardEditor() {
