@@ -311,9 +311,10 @@ async function joinCloudHousehold(code, displayName) {
 
 function openCloudSetup() {
   const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
-  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="加入家庭"><h2>加入家庭云端</h2><p>向家庭创建者索要邀请码，加入后就能同步任务、星星和奖励。</p><div class="form-grid"><label>你的称呼<input id="cloud-name" value="家庭成员" /></label><label>家庭邀请码<input id="cloud-code" placeholder="例如：A1B2C3D4" /></label></div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-cloud-join>加入家庭</button></div></div>`;
+  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="加入家庭"><h2>加入家庭云端</h2><p>请向家庭创建者索要 8 位邀请码，复制后粘贴到下方，加入后就能同步任务、星星和奖励。</p><div class="form-grid"><label>你的称呼<input id="cloud-name" value="家庭成员" /></label><label>家庭邀请码<input id="cloud-code" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="粘贴 8 位邀请码" /></label></div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-cloud-join>加入家庭</button></div></div>`;
   document.body.appendChild(wrapper);
   wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
+  wrapper.querySelector("#cloud-code").addEventListener("input", (event) => { event.target.value = event.target.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8); });
   const finish = async () => { const name = wrapper.querySelector("#cloud-name").value.trim() || "家庭成员"; const code = wrapper.querySelector("#cloud-code").value.trim(); try { wrapper.querySelectorAll("button").forEach((button) => { button.disabled = true; }); wrapper.querySelector("p").textContent = "正在连接云端，请稍候…"; if (!code) throw new Error("请先填写邀请码"); await joinCloudHousehold(code, name); wrapper.remove(); render(); showToast("已加入家庭云端"); } catch (error) { wrapper.querySelector("p").textContent = cloudErrorMessage(error); wrapper.querySelectorAll("button").forEach((button) => { button.disabled = false; }); } };
   wrapper.querySelector("[data-cloud-join]").addEventListener("click", finish);
 }
@@ -346,7 +347,7 @@ async function shareInvite() {
   const message = `加入${cloud.familyName || "我的家庭"}，打开家庭应用后输入邀请码：${cloud.inviteCode}`;
   try {
     if (navigator.share) await navigator.share({ title: `${cloud.familyName || "家庭"}邀请`, text: message });
-    else { await navigator.clipboard.writeText(message); showToast("邀请信息已复制，可以发给家人"); }
+    else { await navigator.clipboard.writeText(cloud.inviteCode); showToast(`邀请码 ${cloud.inviteCode} 已复制，可以发给家人`); }
   } catch (error) {
     if (error?.name !== "AbortError") showToast(`邀请码：${cloud.inviteCode}`);
   }
@@ -427,7 +428,7 @@ function bindEvents() {
     const cloudCard = mineView.querySelector(".cloud-card");
     cloudCard?.querySelector("[data-action=share-invite]")?.remove();
     const inviteCard = document.createElement("div"); inviteCard.className = "invite-card";
-    inviteCard.innerHTML = `<div><h3>邀请家人加入</h3><p>${cloud.inviteCode ? `邀请码：<b>${escapeHtml(cloud.inviteCode)}</b>` : "连接家庭云端后会生成邀请码"}</p></div><button class="secondary-button" data-action="share-invite">${cloud.inviteCode ? "发送邀请码" : "查看邀请码"}</button>`;
+    inviteCard.innerHTML = `<div><h3>邀请家人加入</h3><p>${cloud.inviteCode ? `邀请码：<b>${escapeHtml(cloud.inviteCode)}</b>` : "连接家庭云端后会生成邀请码"}</p></div><div class="invite-actions"><button class="secondary-button" data-action="copy-invite" ${cloud.inviteCode ? "" : "disabled"}>复制邀请码</button><button class="primary-button" data-action="share-invite" ${cloud.inviteCode ? "" : "disabled"}>分享给家人</button></div>`;
     cloudCard?.after(inviteCard);
   }
   if (mineView && cloud.status === "连接失败") {
