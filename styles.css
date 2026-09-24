@@ -306,4 +306,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .invite-card h3 { margin: 0; font-size: 15px; }
 .invite-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .invite-card p b { color: var(--coral-dark); letter-spacing: .08em; }
+.invite-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+.invite-actions .primary-button, .invite-actions .secondary-button { min-height: 38px; padding: 8px 11px; font-size: 11px; }
 .invite-card .secondary-button { flex: 0 0 auto; min-height: 38px; padding: 8px 12px; font-size: 12px; }
