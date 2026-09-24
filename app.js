@@ -196,11 +196,20 @@ function cloudStatusText() {
 
 function cloudErrorMessage(error) {
   const message = error?.message || String(error || "");
+  if (/anonymous.*(disabled|not enabled)|anonymous sign[- ]?in/i.test(message)) return "Supabase 没有开启匿名登录，请到 Authentication → Sign In / Providers 开启 Anonymous。";
+  if (/invalid.*(api|key)|api.?key|publishable/i.test(message)) return "Supabase 公钥无效或未加载，请检查 supabase-config.js。";
+  if (/relation .*does not exist|schema cache|could not find the table/i.test(message)) return "云端数据库表还未创建，请在 Supabase SQL Editor 运行最新的 supabase-schema.sql。";
+  if (/PGRST116|JSON object requested|permission denied|row-level security|not a member/i.test(message)) return "当前手机的登录身份还没有加入这个家庭，请使用家庭邀请码重新加入。";
   if (/failed to fetch|networkerror|load failed|blocked_by_client|network request failed/i.test(message)) {
     if (typeof navigator !== "undefined" && navigator.onLine === false) return "当前手机似乎没有网络，请联网后重试";
     return "当前页面无法访问 Supabase 云端。请点击右上角“在浏览器打开”后重试；如果仍失败，请在 Supabase → Authentication → Sign In / Providers 中确认 Anonymous 已开启。";
   }
   return message || "连接失败，请稍后重试";
+}
+
+function resetCloudConnection() {
+  if (cloud.channel && supabaseClient) void supabaseClient.removeChannel(cloud.channel);
+  cloud.channel = null; cloud.status = supabaseClient ? "准备连接" : "未配置"; cloud.error = "";
 }
 
 function clearLocalFamilyData() {
@@ -268,6 +277,11 @@ async function initCloudSync() {
     if (!cloud.householdId) { cloud.status = "待创建或加入"; render(); return; }
     await loadCloudState(); subscribeCloud();
   } catch (error) { cloud.status = "连接失败"; cloud.error = cloudErrorMessage(error); render(); }
+}
+
+async function reconnectCloud() {
+  resetCloudConnection(); render();
+  await initCloudSync();
 }
 
 async function syncCloudState() {
@@ -412,6 +426,12 @@ function bindEvents() {
     inviteCard.innerHTML = `<div><h3>邀请家人加入</h3><p>${cloud.inviteCode ? `邀请码：<b>${escapeHtml(cloud.inviteCode)}</b>` : "连接家庭云端后会生成邀请码"}</p></div><button class="secondary-button" data-action="share-invite">${cloud.inviteCode ? "发送邀请码" : "查看邀请码"}</button>`;
     cloudCard?.after(inviteCard);
   }
+  if (mineView && cloud.status === "连接失败") {
+    const cloudActions = mineView.querySelector(".cloud-card-actions");
+    if (cloudActions && !cloudActions.querySelector("[data-action=reconnect]")) {
+      const retryButton = document.createElement("button"); retryButton.className = "secondary-button"; retryButton.dataset.action = "reconnect"; retryButton.textContent = "重新连接"; cloudActions.prepend(retryButton);
+    }
+  }
   const taskView = app.querySelector('[data-view="tasks"]');
   if (taskView) {
     const taskEyebrow = taskView.querySelector(".eyebrow"); if (taskEyebrow) taskEyebrow.textContent = "任务库 · 每日打卡";
@@ -428,6 +448,7 @@ function bindEvents() {
   app.querySelectorAll("[data-action=permissions]").forEach((button) => button.addEventListener("click", openPermissionEditor));
   app.querySelectorAll("[data-action=cloud-setup]").forEach((button) => button.addEventListener("click", openCloudSetup));
   app.querySelectorAll("[data-action=share-invite]").forEach((button) => button.addEventListener("click", shareInvite));
+  app.querySelectorAll("[data-action=reconnect]").forEach((button) => button.addEventListener("click", () => { button.disabled = true; button.textContent = "连接中…"; void reconnectCloud(); }));
   app.querySelectorAll("[data-action=reset-family]").forEach((button) => button.addEventListener("click", () => { if (window.confirm("确定清空本设备的家庭数据并重新创建吗？云端家庭不会被删除。")) resetThisDeviceFamily(); }));
   app.querySelectorAll("[data-action=copy-invite]").forEach((button) => button.addEventListener("click", async () => { try { await navigator.clipboard.writeText(cloud.inviteCode); showToast(`邀请码 ${cloud.inviteCode} 已复制`); } catch { showToast(`邀请码：${cloud.inviteCode}`); } }));
   app.querySelectorAll("[data-action=weather]").forEach((button) => button.addEventListener("click", () => { const index = weatherOptions.indexOf(state.weather); state.weather = weatherOptions[(index + 1) % weatherOptions.length]; save("family_weather", state.weather); state.menuIndex = weatherOptions.indexOf(state.weather) % menuSeed.length; save("family_menu", state.menuIndex); void syncCloudState(); render(); showToast(`已按“${state.weather}”重新推荐`); }));
