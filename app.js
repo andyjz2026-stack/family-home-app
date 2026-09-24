@@ -220,7 +220,11 @@ function clearLocalFamilyData() {
 async function ensureCloudAuth() {
   if (!supabaseClient) throw new Error("云端配置未加载");
   const sessionResult = await supabaseClient.auth.getSession();
-  if (sessionResult.data.session?.user) { cloud.userId = sessionResult.data.session.user.id; return sessionResult.data.session.user; }
+  if (sessionResult.data.session?.access_token) {
+    const userResult = await supabaseClient.auth.getUser(sessionResult.data.session.access_token);
+    if (!userResult.error && userResult.data.user) { cloud.userId = userResult.data.user.id; return userResult.data.user; }
+    await supabaseClient.auth.signOut({ scope: "local" });
+  }
   const result = await supabaseClient.auth.signInAnonymously();
   if (result.error) throw result.error;
   cloud.userId = result.data.user.id;
