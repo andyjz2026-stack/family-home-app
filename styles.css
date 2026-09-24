@@ -291,3 +291,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* 奖励进度条：用礼盒节点表达奖励门槛，具体内容点击查看 */
+.reward-track { position: relative; height: 14px; margin: 27px 18px 40px; overflow: visible; }
+.reward-track > i { position: absolute; inset: 0 auto 0 0; z-index: 1; width: 0; height: 100%; }
+.reward-nodes { position: absolute; inset: 0; z-index: 2; height: auto; pointer-events: none; }
+.reward-node { top: 50%; width: 44px; transform: translate(-50%, -50%); pointer-events: auto; }
+.reward-node small { position: absolute; top: calc(100% + 7px); font-size: 10px; font-weight: 800; color: var(--muted); }
+.reward-chest { width: 32px; height: 32px; box-shadow: 0 4px 9px rgba(100, 73, 42, .12); }
+.reward-labels { display: none; }
+.reward-progress-hint { margin-top: 3px; }
+
+.invite-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 15px; border: 1px solid #ead8c5; border-radius: 20px; background: linear-gradient(135deg, #fff8ea, #fffdf8); }
+.invite-card h3 { margin: 0; font-size: 15px; }
+.invite-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.invite-card p b { color: var(--coral-dark); letter-spacing: .08em; }
+.invite-card .secondary-button { flex: 0 0 auto; min-height: 38px; padding: 8px 12px; font-size: 12px; }
