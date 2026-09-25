@@ -231,24 +231,35 @@ async function ensureCloudAuth() {
 
 function applyCloudRow(row) {
   if (!row) return;
+  let shouldRepairRemote = false;
   if (Array.isArray(row.tasks)) {
     const localTasks = normalizeTasks(state.tasks);
     const remoteTasks = normalizeTasks(row.tasks);
     const localHasCustomTasks = localTasks.some((task) => !taskSeed.some((seed) => seed.id === task.id));
-    if (!remoteTasks.length && localTasks.length) state.tasks = localTasks;
+    if (!remoteTasks.length && localTasks.length) { state.tasks = localTasks; shouldRepairRemote = true; }
     else if (localHasCustomTasks) {
       const remoteIds = new Set(remoteTasks.map((task) => task.id));
       state.tasks = [...remoteTasks, ...localTasks.filter((task) => !remoteIds.has(task.id))];
+      shouldRepairRemote = state.tasks.length !== remoteTasks.length;
     } else state.tasks = remoteTasks;
   }
-  if (Array.isArray(row.rewards)) state.rewards = row.rewards.length ? row.rewards : state.rewards;
-  if (typeof row.points === "number") state.points = Math.max(Number(row.points) || 0, Number(state.points) || 0);
+  if (Array.isArray(row.rewards)) {
+    if (row.rewards.length) state.rewards = row.rewards;
+    else if (state.rewards.length) shouldRepairRemote = true;
+  }
+  if (typeof row.points === "number") {
+    const remotePoints = Number(row.points) || 0;
+    const localPoints = Number(state.points) || 0;
+    state.points = Math.max(remotePoints, localPoints);
+    if (localPoints > remotePoints) shouldRepairRemote = true;
+  }
   if (typeof row.menu_index === "number") state.menuIndex = row.menu_index;
   if (typeof row.weather === "string") state.weather = row.weather;
   if (typeof row.photo === "string") state.photo = row.photo;
   if (typeof row.rating === "number") state.rating = row.rating;
   save("family_tasks", state.tasks); save("family_points", state.points); save("family_rewards", state.rewards); save("family_menu", state.menuIndex); save("family_weather", state.weather); save("family_photo", state.photo); save("family_rating", state.rating);
   render();
+  if (shouldRepairRemote) void syncCloudState();
 }
 
 async function refreshCloudMembers() {
