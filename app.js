@@ -164,9 +164,7 @@ function resetThisDeviceFamily() {
   clearLocalFamilyData(); onboarding.step = 1; state.view = "home"; render(); showToast("本设备已清空，可以重新创建家庭了");
 }
 
-if (!load("family_household_id", "")) {
-  state.tasks = []; state.points = 0; state.rewards = []; state.menuIndex = 0; state.photo = ""; state.rating = 0;
-}
+// 没有家庭身份时只展示引导页，不清空本地任务快照，避免云端暂时失败造成任务和星星丢失。
 state.tasks = normalizeTasks(state.tasks);
 
 function taskIconForCategory(category) { return categoryIcons[category] || "✦"; }
@@ -233,9 +231,18 @@ async function ensureCloudAuth() {
 
 function applyCloudRow(row) {
   if (!row) return;
-  if (Array.isArray(row.tasks)) state.tasks = normalizeTasks(row.tasks);
-  if (Array.isArray(row.rewards)) state.rewards = row.rewards;
-  if (typeof row.points === "number") state.points = row.points;
+  if (Array.isArray(row.tasks)) {
+    const localTasks = normalizeTasks(state.tasks);
+    const remoteTasks = normalizeTasks(row.tasks);
+    const localHasCustomTasks = localTasks.some((task) => !taskSeed.some((seed) => seed.id === task.id));
+    if (!remoteTasks.length && localTasks.length) state.tasks = localTasks;
+    else if (localHasCustomTasks) {
+      const remoteIds = new Set(remoteTasks.map((task) => task.id));
+      state.tasks = [...remoteTasks, ...localTasks.filter((task) => !remoteIds.has(task.id))];
+    } else state.tasks = remoteTasks;
+  }
+  if (Array.isArray(row.rewards)) state.rewards = row.rewards.length ? row.rewards : state.rewards;
+  if (typeof row.points === "number") state.points = Math.max(Number(row.points) || 0, Number(state.points) || 0);
   if (typeof row.menu_index === "number") state.menuIndex = row.menu_index;
   if (typeof row.weather === "string") state.weather = row.weather;
   if (typeof row.photo === "string") state.photo = row.photo;
@@ -266,7 +273,7 @@ async function loadCloudState() {
   cloud.memberCount = Number(household.member_count || cloud.memberCount || 5); save("family_member_count", cloud.memberCount);
   const { data, error } = await supabaseClient.from("family_state").select("*").eq("household_id", cloud.householdId).single();
   if (error) throw error;
-  await refreshCloudMembers(); applyCloudRow(data); cloud.status = "已连接"; cloud.error = ""; render();
+  await refreshCloudMembers(); cloud.status = "已连接"; cloud.error = ""; applyCloudRow(data); render();
 }
 
 function subscribeCloud() {
@@ -288,8 +295,8 @@ async function reconnectCloud() {
   await initCloudSync();
 }
 
-async function syncCloudState() {
-  if (!supabaseClient || !cloud.householdId) return;
+async function syncCloudState(force = false) {
+  if (!supabaseClient || !cloud.householdId || (!force && cloud.status !== "已连接")) return;
   const { error } = await supabaseClient.from("family_state").upsert({ household_id: cloud.householdId, tasks: state.tasks, points: state.points, rewards: state.rewards, menu_index: state.menuIndex, weather: state.weather, photo: state.photo || "", rating: state.rating, updated_at: new Date().toISOString() }, { onConflict: "household_id" });
   if (error) { cloud.status = "连接失败"; cloud.error = cloudErrorMessage(error); render(); }
 }
@@ -299,7 +306,7 @@ async function createCloudHousehold(name, displayName, memberCount = 5) {
   await ensureCloudAuth();
   const { data, error } = await supabaseClient.rpc("create_family_household", { p_name: name, p_display_name: displayName, p_member_count: Number(memberCount) || 5 });
   if (error) throw error;
-  cloud.householdId = data.household_id; cloud.inviteCode = data.invite_code; cloud.familyName = data.family_name || name; cloud.memberCount = Number(data.member_count || memberCount) || 5; state.role = data.role || "超管"; save("family_household_id", cloud.householdId); save("family_invite_code", cloud.inviteCode); save("family_name", cloud.familyName); save("family_member_count", cloud.memberCount); save("family_onboarding_version", 1); save("family_setup_version", 2); await syncCloudState(); await loadCloudState(); subscribeCloud();
+  cloud.householdId = data.household_id; cloud.inviteCode = data.invite_code; cloud.familyName = data.family_name || name; cloud.memberCount = Number(data.member_count || memberCount) || 5; state.role = data.role || "超管"; save("family_household_id", cloud.householdId); save("family_invite_code", cloud.inviteCode); save("family_name", cloud.familyName); save("family_member_count", cloud.memberCount); save("family_onboarding_version", 1); save("family_setup_version", 2); await syncCloudState(true); await loadCloudState(); subscribeCloud();
 }
 
 async function joinCloudHousehold(code, displayName) {
