@@ -106,6 +106,7 @@ create policy "members can update family state" on public.family_state for updat
 create or replace function public.guard_family_state_update()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+  new.earned_points = greatest(coalesce(old.earned_points, 0), coalesce(new.earned_points, 0));
   if not public.is_family_admin(new.household_id) and new.rewards is distinct from old.rewards then
     raise exception '只有超管或管理员可以修改奖励';
   end if;
