@@ -102,13 +102,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .admin-toolbar button { padding: 7px 9px; border-radius: 9px; color: #7b5713; background: #f4bd45; font-size: 11px; font-weight: 800; }
 
 .points-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-radius: 22px; color: #fffaf1; background: #2e9580; box-shadow: var(--shadow); }
+.points-stat { min-width: 0; }
+.points-stat + .points-stat { padding-left: 14px; border-left: 1px solid rgba(255,255,255,.24); }
 .points-banner small { display: block; color: rgba(255,255,255,.75); font-size: 12px; }
 .points-banner strong { display: block; margin-top: 3px; font-family: Nunito, sans-serif; font-size: 30px; line-height: 1; }
+.points-available strong { color: #ffe19a; }
 .points-banner .trophy { font-size: 39px; }
 .reward-card { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 16px; border-radius: 20px; background: #fff0c5; }
 .reward-card h3 { margin: 0; font-size: 15px; }
 .reward-card p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .reward-button { flex: 0 0 auto; padding: 10px 13px; border-radius: 12px; color: #7b5713; background: #f4bd45; font-size: 12px; font-weight: 800; }
+.reward-button:disabled, .primary-button:disabled { opacity: .48; cursor: not-allowed; }
 .reward-ladder { display: grid; gap: 8px; margin-bottom: 12px; }
 .reward-progress { position: relative; margin: 7px 0 14px; padding: 15px 13px 12px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,250,242,.72); }.reward-progress-head { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }.reward-progress-head b { color: var(--coral-dark); font-size: 13px; }.reward-track { height: 12px; margin: 18px 5px 28px; border-radius: 999px; background: #eee3d4; overflow: visible; }.reward-track i { position: relative; display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--coral), var(--yellow)); transition: width .45s ease; }.reward-nodes { position: relative; height: 0; }.reward-node { position: absolute; top: -27px; display: grid; justify-items: center; gap: 2px; width: 42px; padding: 0; transform: translateX(-50%); color: var(--muted); background: transparent; }.reward-chest { display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid #e3d4bf; border-radius: 12px; background: #fffaf2; font-size: 19px; filter: grayscale(.65); transition: transform .2s ease, filter .2s ease, border-color .2s ease; }.reward-node small { font-size: 10px; white-space: nowrap; }.reward-node.reached .reward-chest { border-color: var(--yellow); background: #fff0c5; filter: none; }.reward-node:active .reward-chest, .reward-node:hover .reward-chest { transform: translateY(-2px) scale(1.06); filter: none; }.reward-labels { display: flex; gap: 8px; overflow: hidden; color: var(--muted); font-size: 10px; }.reward-labels span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }.reward-progress-hint { margin: 9px 0 0; color: var(--muted); font-size: 10px; text-align: center; }.reward-empty { padding: 14px; color: var(--muted); font-size: 12px; }
 .reward-tier { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,250,242,.7); }
@@ -308,4 +312,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .invite-card p b { color: var(--coral-dark); letter-spacing: .08em; }
 .invite-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 .invite-actions .primary-button, .invite-actions .secondary-button { min-height: 38px; padding: 8px 11px; font-size: 11px; }
+
+.reward-detail-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 12px; }
+.reward-detail-summary span { display: grid; gap: 4px; padding: 10px 8px; border-radius: 13px; color: var(--muted); background: #fff7e7; font-size: 10px; text-align: center; }
+.reward-detail-summary strong { color: var(--coral-dark); font-size: 14px; }
 .invite-card .secondary-button { flex: 0 0 auto; min-height: 38px; padding: 8px 12px; font-size: 12px; }
