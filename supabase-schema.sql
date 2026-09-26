@@ -29,6 +29,7 @@ create table if not exists public.family_state (
   household_id uuid primary key references public.family_households(id) on delete cascade,
   tasks jsonb not null default '[]'::jsonb,
   points integer not null default 0,
+  earned_points integer not null default 0,
   rewards jsonb not null default '[]'::jsonb,
   menu_index integer not null default 0,
   weather text not null default '昼夜温差大',
@@ -36,6 +37,8 @@ create table if not exists public.family_state (
   rating integer not null default 0 check (rating between 0 and 5),
   updated_at timestamptz not null default now()
 );
+
+alter table public.family_state add column if not exists earned_points integer not null default 0;
 
 create or replace function public.is_family_member(target_household uuid)
 returns boolean language sql stable security definer set search_path = public as $$
