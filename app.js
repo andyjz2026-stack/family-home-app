@@ -134,7 +134,7 @@ function load(key, fallback) { try { const raw = localStorage.getItem(key); retu
 function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* local-only fallback */ } }
 function migrateData() {
   if (Number(load("family_data_version", 0)) < 2) {
-    save("family_tasks", clone(taskSeed)); save("family_points", 0); save("family_rewards", clone(rewardSeed)); save("family_admin_users", clone(adminSeed)); save("family_data_version", 2);
+    save("family_tasks", clone(taskSeed)); save("family_points", 0); save("family_earned_points", 0); save("family_rewards", clone(rewardSeed)); save("family_admin_users", clone(adminSeed)); save("family_data_version", 2);
   }
 }
 migrateData();
@@ -148,8 +148,10 @@ if (load("family_name", "") === "墨晨一家" && Number(load("family_setup_vers
   ["family_household_id", "family_invite_code", "family_name", "family_member_count", "family_onboarding_version", "family_setup_version"].forEach((key) => { try { localStorage.removeItem(key); } catch {} });
 }
 
+const storedPoints = Math.max(0, Number(load("family_points", 0)) || 0);
+const storedEarnedPoints = Math.max(storedPoints, Number(load("family_earned_points", storedPoints)) || 0);
 const state = {
-  view: "home", filter: "全部", tasks: load("family_tasks", clone(taskSeed)), points: Number(load("family_points", 0)), rewards: load("family_rewards", clone(rewardSeed)), adminUsers: load("family_admin_users", clone(adminSeed)), role: "超管", menuIndex: Number(load("family_menu", 0)), weather: load("family_weather", weatherOptions[0]), photo: load("family_photo", ""), rating: Number(load("family_rating", 0)), theme: load("family_theme", "spring"),
+  view: "home", filter: "全部", tasks: load("family_tasks", clone(taskSeed)), points: storedPoints, earnedPoints: storedEarnedPoints, syncDirty: Boolean(load("family_state_dirty", false)), rewards: load("family_rewards", clone(rewardSeed)), adminUsers: load("family_admin_users", clone(adminSeed)), role: "超管", menuIndex: Number(load("family_menu", 0)), weather: load("family_weather", weatherOptions[0]), photo: load("family_photo", ""), rating: Number(load("family_rating", 0)), theme: load("family_theme", "spring"),
 };
 
 function applyTheme() {
@@ -211,9 +213,13 @@ function resetCloudConnection() {
 }
 
 function clearLocalFamilyData() {
-  state.tasks = []; state.points = 0; state.rewards = []; state.menuIndex = 0; state.weather = weatherOptions[0]; state.photo = ""; state.rating = 0;
-  state.adminUsers = []; save("family_tasks", state.tasks); save("family_points", 0); save("family_rewards", state.rewards); save("family_admin_users", []); save("family_menu", 0); save("family_weather", state.weather); save("family_photo", ""); save("family_rating", 0);
+  state.tasks = []; state.points = 0; state.earnedPoints = 0; state.syncDirty = false; state.rewards = []; state.menuIndex = 0; state.weather = weatherOptions[0]; state.photo = ""; state.rating = 0;
+  state.adminUsers = []; save("family_tasks", state.tasks); save("family_points", 0); save("family_earned_points", 0); save("family_state_dirty", false); save("family_rewards", state.rewards); save("family_admin_users", []); save("family_menu", 0); save("family_weather", state.weather); save("family_photo", ""); save("family_rating", 0);
 }
+
+function markStateDirty() { state.syncDirty = true; save("family_state_dirty", true); }
+function markStateSynced() { state.syncDirty = false; save("family_state_dirty", false); }
+function savePointState() { save("family_points", state.points); save("family_earned_points", state.earnedPoints); }
 
 async function ensureCloudAuth() {
   if (!supabaseClient) throw new Error("云端配置未加载");
@@ -250,14 +256,25 @@ function applyCloudRow(row) {
   if (typeof row.points === "number") {
     const remotePoints = Number(row.points) || 0;
     const localPoints = Number(state.points) || 0;
-    state.points = Math.max(remotePoints, localPoints);
-    if (localPoints > remotePoints) shouldRepairRemote = true;
+    const remoteEarned = Number(row.earned_points ?? remotePoints) || 0;
+    const localEarned = Number(state.earnedPoints) || localPoints;
+    const localHasCustomTasks = state.tasks.some((task) => !taskSeed.some((seed) => seed.id === task.id));
+    // 保留仍在本机的自定义任务/累计星星，避免旧版本的空云端快照覆盖有效数据。
+    if (localEarned > remoteEarned || (localPoints > remotePoints && localHasCustomTasks)) {
+      state.earnedPoints = Math.max(localEarned, remoteEarned);
+      state.points = localPoints;
+      shouldRepairRemote = true;
+    } else {
+      state.earnedPoints = Math.max(remoteEarned, localEarned);
+      state.points = remotePoints;
+    }
   }
   if (typeof row.menu_index === "number") state.menuIndex = row.menu_index;
   if (typeof row.weather === "string") state.weather = row.weather;
   if (typeof row.photo === "string") state.photo = row.photo;
   if (typeof row.rating === "number") state.rating = row.rating;
-  save("family_tasks", state.tasks); save("family_points", state.points); save("family_rewards", state.rewards); save("family_menu", state.menuIndex); save("family_weather", state.weather); save("family_photo", state.photo); save("family_rating", state.rating);
+  save("family_tasks", state.tasks); savePointState(); save("family_rewards", state.rewards); save("family_menu", state.menuIndex); save("family_weather", state.weather); save("family_photo", state.photo); save("family_rating", state.rating);
+  if (!shouldRepairRemote) markStateSynced();
   render();
   if (shouldRepairRemote) void syncCloudState();
 }
@@ -308,8 +325,15 @@ async function reconnectCloud() {
 
 async function syncCloudState(force = false) {
   if (!supabaseClient || !cloud.householdId || (!force && cloud.status !== "已连接")) return;
-  const { error } = await supabaseClient.from("family_state").upsert({ household_id: cloud.householdId, tasks: state.tasks, points: state.points, rewards: state.rewards, menu_index: state.menuIndex, weather: state.weather, photo: state.photo || "", rating: state.rating, updated_at: new Date().toISOString() }, { onConflict: "household_id" });
+  const payload = { household_id: cloud.householdId, tasks: state.tasks, points: state.points, earned_points: state.earnedPoints, rewards: state.rewards, menu_index: state.menuIndex, weather: state.weather, photo: state.photo || "", rating: state.rating, updated_at: new Date().toISOString() };
+  let { error } = await supabaseClient.from("family_state").upsert(payload, { onConflict: "household_id" });
+  // 兼容还没执行新增字段迁移的旧项目：先保证任务和可兑换星星仍能同步。
+  if (error && /earned_points|column/i.test(error.message || "")) {
+    const legacyPayload = { ...payload }; delete legacyPayload.earned_points;
+    ({ error } = await supabaseClient.from("family_state").upsert(legacyPayload, { onConflict: "household_id" }));
+  }
   if (error) { cloud.status = "连接失败"; cloud.error = cloudErrorMessage(error); render(); }
+  else markStateSynced();
 }
 
 async function createCloudHousehold(name, displayName, memberCount = 5) {
@@ -343,6 +367,7 @@ function currentMenu() { return menuSeed[state.menuIndex % menuSeed.length]; }
 function completedCount() { return state.tasks.filter((task) => task.done).length; }
 function progressPercent() { return state.tasks.length ? Math.round((completedCount() / state.tasks.length) * 100) : 0; }
 function nextReward() { return state.rewards.find((reward) => state.points < reward.points) || state.rewards[state.rewards.length - 1]; }
+function redeemableReward() { return [...state.rewards].filter((reward) => state.points >= Number(reward.points)).sort((a, b) => Number(b.points) - Number(a.points))[0]; }
 
 function renderMenuDishes(menu) {
   return menu.dishes.map((dish) => `<article class="dish-item"><div class="dish-item-head"><span class="dish-emoji">${dish.emoji}</span><div><h3>${escapeHtml(dish.name)}</h3><p>${escapeHtml(dish.role)}</p></div></div><div class="ingredients">${dish.ingredients.map((item) => `<span class="ingredient">${escapeHtml(item)}</span>`).join("")}</div><ol class="steps">${dish.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></article>`).join("");
@@ -352,7 +377,25 @@ function renderRewardLadder() {
   if (!state.rewards.length) return `<div class="empty-card reward-empty">还没有设置阶梯奖励</div>`;
   const maxPoints = Math.max(1, state.rewards[state.rewards.length - 1].points);
   const progress = Math.min(100, Math.round((state.points / maxPoints) * 100));
-  return `<div class="reward-progress"><div class="reward-progress-head"><span>累计进度</span><b>${state.points} 星</b></div><div class="reward-track"><i style="width:${progress}%"></i><div class="reward-nodes">${state.rewards.map((item, index) => { const left = Math.min(96, Math.max(4, Math.round((item.points / maxPoints) * 100))); return `<button class="reward-node ${state.points >= item.points ? "reached" : ""}" style="left:${left}%" data-reward-detail="${index}" aria-label="查看 ${item.points} 星礼盒奖励"><span class="reward-chest">🎁</span><small>${item.points}星</small></button>`; }).join("")}</div></div><p class="reward-progress-hint">点击礼盒查看具体奖励</p></div>`;
+  return `<div class="reward-progress"><div class="reward-progress-head"><span>当前可兑换进度</span><b>${state.points} 星 · 累计 ${state.earnedPoints} 星</b></div><div class="reward-track"><i style="width:${progress}%"></i><div class="reward-nodes">${state.rewards.map((item, index) => { const left = Math.min(96, Math.max(4, Math.round((item.points / maxPoints) * 100))); return `<button class="reward-node ${state.points >= item.points ? "reached" : ""}" style="left:${left}%" data-reward-detail="${index}" aria-label="查看 ${item.points} 星礼盒奖励"><span class="reward-chest">🎁</span><small>${item.points}星</small></button>`; }).join("")}</div></div><p class="reward-progress-hint">礼盒门槛按当前可兑换星星判断，点击查看并兑换</p></div>`;
+}
+
+function redeemReward(rewardId) {
+  const reward = state.rewards.find((item) => item.id === rewardId);
+  if (!reward) return;
+  const cost = Number(reward.points) || 0;
+  if (state.points < cost) { showToast(`还差 ${cost - state.points} 颗可兑换星星`); return; }
+  state.points -= cost; savePointState(); markStateDirty(); void syncCloudState(); render(); showToast(`已兑换「${reward.title}」，扣除 ${cost} 颗星星`);
+}
+
+function openRewardDetail(index) {
+  const reward = state.rewards[Number(index)]; if (!reward) return;
+  const cost = Number(reward.points) || 0; const eligible = state.points >= cost;
+  const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
+  wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="奖励详情"><h2>🎁 ${escapeHtml(reward.title)}</h2><p>${escapeHtml(reward.description || "完成任务后，用当前可兑换星星兑换这份奖励。")} </p><div class="reward-detail-summary"><span>累计获得<strong>${state.earnedPoints} 星</strong></span><span>当前可兑换<strong>${state.points} 星</strong></span><span>兑换需要<strong>${cost} 星</strong></span></div><div class="modal-actions"><button class="secondary-button" data-close>关闭</button><button class="primary-button" data-redeem ${eligible ? "" : "disabled"}>${eligible ? "立即兑换" : `还差 ${cost - state.points} 星`}</button></div></div>`;
+  document.body.appendChild(wrapper);
+  wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
+  wrapper.querySelector("[data-redeem]").addEventListener("click", () => { wrapper.remove(); redeemReward(reward.id); });
 }
 
 function canInvite() { return state.role === "超管"; }
@@ -404,11 +447,11 @@ function render() {
   refreshTaskDailyStatus();
   applyTheme();
   if (!cloud.householdId) { renderSetup(); return; }
-  const menu = currentMenu(); const tasks = state.filter === "全部" ? state.tasks : state.tasks.filter((task) => task.category === state.filter); const reward = nextReward();
+  const menu = currentMenu(); const tasks = state.filter === "全部" ? state.tasks : state.tasks.filter((task) => task.category === state.filter); const reward = nextReward(); const redeemable = redeemableReward();
   app.innerHTML = `
     <div class="app-shell"><div class="phone-frame"><header class="topbar"><div class="brand"><div class="brand-mark">✦</div><div class="brand-text"><strong>家里有光</strong><span>${escapeHtml(cloud.familyName || "家庭小乐园")}</span></div></div><button class="profile-button" data-nav="mine" aria-label="打开我的设置"><span class="avatar">🧒</span><span>${escapeHtml(cloud.familyName || "我的家庭")}</span></button></header>
-      <section class="view ${state.view === "home" ? "active" : ""}" data-view="home"><div class="eyebrow">星期三 · 9 月 23 日</div><h1 class="view-title">下午好，${escapeHtml(cloud.familyName || "我的家庭")}<br />今天也一起发光吧。</h1><div class="home-grid"><article class="hero-card"><h1>完成一个小任务，<br />打开今天的惊喜。</h1><p>每一次行动都会变成成长能量。先从最简单的一件事开始吧。</p><button class="hero-action" data-nav="tasks">去看看任务 <span>→</span></button></article><div><div class="section-heading"><h2>墨晨的今日进度</h2><button data-nav="tasks">查看全部</button></div><div class="progress-card"><div class="progress-top"><strong>${completedCount()} / ${state.tasks.length} 个任务</strong><span>✦ ${state.points} 星星</span></div><div class="progress-track" style="--progress:${progressPercent()}%"><i></i></div><div class="progress-meta"><span>连续完成 <b>0 天</b></span><span>${progressPercent() === 100 ? "今日全完成！" : "再完成一个就升级"}</span></div></div></div><div><div class="section-heading"><h2>今日推荐菜单</h2><button data-nav="menu">打开菜单</button></div><button class="menu-preview" data-nav="menu"><span class="dish-visual">${menu.dishes[0].emoji}</span><span><h3>${escapeHtml(menu.name)}</h3><p>${menu.dishes.length} 道搭配 · ${escapeHtml(menu.weather)} · ${escapeHtml(menu.reason)}</p></span></button></div></div><div class="section-heading"><h2>快速操作</h2></div><div class="quick-grid"><button class="quick-button" data-nav="tasks"><span>✦</span><b>给墨晨布置任务<small>学习、运动、家务、手工</small></b></button><button class="quick-button" data-action="voice"><span>🎙️</span><b>告诉我想吃什么<small>说一句话，重新推荐</small></b></button></div></section>
-      <section class="view ${state.view === "tasks" ? "active" : ""}" data-view="tasks"><div class="eyebrow">今日成长能量</div><h1 class="view-title">任务乐园</h1><div class="points-banner"><div><small>墨晨的成长星星</small><strong>${state.points}</strong></div><span class="trophy">🏆</span></div><div class="section-heading"><h2>今天挑战什么？</h2><span class="rating-caption">完成后会获得星星</span></div><div class="filter-row">${categories.map((category) => `<button class="filter-chip ${state.filter === category ? "active" : ""}" data-filter="${category}">${category}</button>`).join("")}</div>${canManage() ? `<div class="admin-toolbar"><span>🔐 ${state.role}可编辑任务和奖励</span><button data-action="new-task">新建任务</button><button data-action="rewards">奖励设置</button></div>` : ""}<div class="task-list">${tasks.map((task) => `<div class="task-row"><button class="task-card ${task.done ? "done" : ""}" data-task="${task.id}"><span class="task-icon">${escapeHtml(task.icon)}</span><span><h3>${escapeHtml(task.title)}</h3><p>${escapeHtml(task.detail)}</p></span><span><span class="task-points">${task.points}</span><span class="task-check">✓</span></span></button>${canManage() ? `<button class="task-edit-button" data-edit-task="${task.id}">编辑</button>` : ""}</div>`).join("")}</div><div class="section-heading"><h2>星星阶梯奖励</h2><span class="rating-caption">${reward ? `下一档：${reward.points} 星` : ""}</span></div><div class="reward-ladder">${state.rewards.map((item) => `<div class="reward-tier ${state.points >= item.points ? "reached" : ""}"><span><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.description)}</small></span><strong>${item.points} 星</strong></div>`).join("")}</div><div class="reward-card"><span><h3>${reward ? escapeHtml(reward.title) : "继续保持"}</h3><p>${reward ? `还差 ${Math.max(0, reward.points - state.points)} 星星 · ${escapeHtml(reward.description)}` : "所有奖励都已解锁"}</p></span><button class="reward-button" data-action="reward">查看奖励</button></div></section>
+      <section class="view ${state.view === "home" ? "active" : ""}" data-view="home"><div class="eyebrow">星期三 · 9 月 23 日</div><h1 class="view-title">下午好，${escapeHtml(cloud.familyName || "我的家庭")}<br />今天也一起发光吧。</h1><div class="home-grid"><article class="hero-card"><h1>完成一个小任务，<br />打开今天的惊喜。</h1><p>每一次行动都会变成成长能量。先从最简单的一件事开始吧。</p><button class="hero-action" data-nav="tasks">去看看任务 <span>→</span></button></article><div><div class="section-heading"><h2>墨晨的今日进度</h2><button data-nav="tasks">查看全部</button></div><div class="progress-card"><div class="progress-top"><strong>${completedCount()} / ${state.tasks.length} 个任务</strong><span>✦ ${state.points} 可兑换 · 累计 ${state.earnedPoints}</span></div><div class="progress-track" style="--progress:${progressPercent()}%"><i></i></div><div class="progress-meta"><span>连续完成 <b>0 天</b></span><span>${progressPercent() === 100 ? "今日全完成！" : "再完成一个就升级"}</span></div></div></div><div><div class="section-heading"><h2>今日推荐菜单</h2><button data-nav="menu">打开菜单</button></div><button class="menu-preview" data-nav="menu"><span class="dish-visual">${menu.dishes[0].emoji}</span><span><h3>${escapeHtml(menu.name)}</h3><p>${menu.dishes.length} 道搭配 · ${escapeHtml(menu.weather)} · ${escapeHtml(menu.reason)}</p></span></button></div></div><div class="section-heading"><h2>快速操作</h2></div><div class="quick-grid"><button class="quick-button" data-nav="tasks"><span>✦</span><b>给墨晨布置任务<small>学习、运动、家务、手工</small></b></button><button class="quick-button" data-action="voice"><span>🎙️</span><b>告诉我想吃什么<small>说一句话，重新推荐</small></b></button></div></section>
+      <section class="view ${state.view === "tasks" ? "active" : ""}" data-view="tasks"><div class="eyebrow">今日成长能量</div><h1 class="view-title">任务乐园</h1><div class="points-banner"><div class="points-stat"><small>累计获得星星</small><strong>${state.earnedPoints}</strong></div><div class="points-stat points-available"><small>当前可兑换</small><strong>${state.points}</strong></div><span class="trophy">🏆</span></div><div class="section-heading"><h2>今天挑战什么？</h2><span class="rating-caption">完成后会获得星星</span></div><div class="filter-row">${categories.map((category) => `<button class="filter-chip ${state.filter === category ? "active" : ""}" data-filter="${category}">${category}</button>`).join("")}</div>${canManage() ? `<div class="admin-toolbar"><span>🔐 ${state.role}可编辑任务和奖励</span><button data-action="new-task">新建任务</button><button data-action="rewards">奖励设置</button></div>` : ""}<div class="task-list">${tasks.map((task) => `<div class="task-row"><button class="task-card ${task.done ? "done" : ""}" data-task="${task.id}"><span class="task-icon">${escapeHtml(task.icon)}</span><span><h3>${escapeHtml(task.title)}</h3><p>${escapeHtml(task.detail)}</p></span><span><span class="task-points">${task.points}</span><span class="task-check">✓</span></span></button>${canManage() ? `<button class="task-edit-button" data-edit-task="${task.id}">编辑</button>` : ""}</div>`).join("")}</div><div class="section-heading"><h2>星星阶梯奖励</h2><span class="rating-caption">${reward ? `下一档：${reward.points} 星` : ""}</span></div><div class="reward-ladder">${state.rewards.map((item) => `<div class="reward-tier ${state.points >= item.points ? "reached" : ""}"><span><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.description)}</small></span><strong>${item.points} 星</strong></div>`).join("")}</div><div class="reward-card"><span><h3>${redeemable ? `可兑换：${escapeHtml(redeemable.title)}` : reward ? `下一档：${escapeHtml(reward.title)}` : "继续保持"}</h3><p>${redeemable ? `需要 ${redeemable.points} 星 · 兑换后剩余 ${state.points - redeemable.points} 星` : reward ? `还差 ${Math.max(0, reward.points - state.points)} 星 · ${escapeHtml(reward.description || "继续完成任务")}` : "所有奖励都已设置"}</p></span><button class="reward-button" data-action="reward" ${redeemable || reward ? "" : "disabled"}>${redeemable ? "兑换奖励" : "查看奖励"}</button></div></section>
       <section class="view ${state.view === "menu" ? "active" : ""}" data-view="menu"><div class="eyebrow">今天吃点什么</div><h1 class="view-title">今日菜单</h1><article class="menu-card"><div class="menu-card-header"><div><h3>${escapeHtml(menu.name)}</h3><p>组合推荐 · ${escapeHtml(menu.season)} · ${escapeHtml(menu.weather)}</p></div><span class="dish-badge">${escapeHtml(menu.tags[0])}</span></div><div class="menu-context"><span>🌤️ ${escapeHtml(menu.weather)}</span><span>👨‍👩‍👧‍👦 ${escapeHtml(menu.audience)}</span><button data-action="weather">切换天气</button></div><div class="menu-large-visual">${menu.dishes.map((dish) => dish.emoji).join(" ")}</div><div class="reason-box"><b>为什么推荐这组？</b><br />${escapeHtml(menu.reason)}<br /><span class="nutrition-note">营养提示：${escapeHtml(menu.nutrition)}</span></div><div class="menu-dishes">${renderMenuDishes(menu)}</div><div class="menu-actions"><button class="secondary-button" data-action="regenerate">换一组</button><button class="primary-button" data-action="photo">上传成品照</button></div><button class="voice-button" data-action="voice">🎙️ 说说你的想法，重新推荐</button></article><div class="section-heading"><h2>今日厨神</h2><span class="rating-caption">做完记得来打分</span></div><div class="photo-review"><h3>上传成品照片，给这组菜加一点掌声</h3><div class="photo-preview">${state.photo ? `<img src="${state.photo}" alt="今日菜品成品照片" />` : "点击下方按钮上传照片"}</div><div class="rating-row"><div class="stars">${[1,2,3,4,5].map((n) => `<button class="${state.rating >= n ? "active" : ""}" data-rating="${n}" aria-label="${n} 星">★</button>`).join("")}</div><span class="rating-caption">${state.rating ? `${state.rating} 星 · 家庭鼓励中` : "还没有评分"}</span></div><button class="secondary-button" data-action="photo">${state.photo ? "更换成品照片" : "拍一张成品照"}</button></div></section>
       <section class="view ${state.view === "mine" ? "active" : ""}" data-view="mine"><div class="eyebrow">${escapeHtml(cloud.familyName || "我的家庭")}</div><h1 class="view-title">我的</h1><div class="settings-card"><div class="setting-row"><span><strong>家庭成员</strong><small>已加入 ${state.adminUsers.length} 人 · 计划 ${cloud.memberCount} 人</small></span><span class="setting-value">${cloud.memberCount} 人</span></div><div class="setting-row"><span><strong>当前权限</strong><small>可以管理任务、奖励和家庭管理员</small></span><span class="setting-value">${state.role}</span></div><div class="setting-row"><span><strong>语音入口</strong><small>参考微信式录音、识别、发送反馈</small></span><span class="setting-value">可用</span></div></div><div class="cloud-card"><div><h3>家庭云同步</h3><p>${escapeHtml(cloudStatusText())}</p></div><div class="cloud-card-actions">${cloud.status === "已连接" && canInvite() ? `<button class="secondary-button" data-action="share-invite">发送邀请</button>` : ""}<button class="primary-button" data-action="cloud-setup">加入其他家庭</button></div></div>${canManage() ? `<div class="permission-card"><div><h3>家庭权限管理</h3><p>超管可以给家人开放或收回管理员权限。</p></div><button class="primary-button" data-action="permissions">管理权限</button></div>` : ""}<div class="install-card"><h3>把家里有光放到手机桌面</h3><p>安装后像普通 App 一样打开，任务和菜单也能在没有网络时继续查看。</p><button data-action="install">添加到手机</button></div><div class="section-heading"><h2>关于这个家</h2></div><div class="empty-card" style="padding:17px;border-radius:20px"><p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">这是第一版家庭小乐园。之后可以继续加入家庭相册、健康提醒、共享日历和采购清单。</p></div></section>
     </div></div><nav class="bottom-nav" aria-label="主导航"><div class="bottom-nav-inner">${navItems.map((item) => `<button class="nav-button ${state.view === item.id ? "active" : ""}" data-nav="${item.id}"><span class="nav-icon">${item.icon}</span><span>${item.label}</span></button>`).join("")}</div></nav>`;
@@ -433,7 +476,7 @@ function bindEvents() {
   app.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => { state.filter = button.dataset.filter; render(); }));
   app.querySelectorAll("[data-task]").forEach((button) => button.addEventListener("click", () => completeTask(button.dataset.task)));
   app.querySelectorAll("[data-edit-task]").forEach((button) => button.addEventListener("click", () => openTaskEditor(button.dataset.editTask)));
-  app.querySelectorAll("[data-rating]").forEach((button) => button.addEventListener("click", () => { state.rating = Number(button.dataset.rating); save("family_rating", state.rating); void syncCloudState(); render(); showToast(`已给今日组合 ${state.rating} 星鼓励 ✨`); }));
+  app.querySelectorAll("[data-rating]").forEach((button) => button.addEventListener("click", () => { state.rating = Number(button.dataset.rating); markStateDirty(); save("family_rating", state.rating); void syncCloudState(); render(); showToast(`已给今日组合 ${state.rating} 星鼓励 ✨`); }));
   app.querySelectorAll("[data-action=voice]").forEach((button) => button.addEventListener("click", startVoice));
   app.querySelectorAll("[data-action=regenerate]").forEach((button) => button.addEventListener("click", () => regenerateMenu()));
   app.querySelector(".menu-actions [data-action=photo]")?.remove();
@@ -458,14 +501,13 @@ function bindEvents() {
   const taskView = app.querySelector('[data-view="tasks"]');
   if (taskView) {
     const taskEyebrow = taskView.querySelector(".eyebrow"); if (taskEyebrow) taskEyebrow.textContent = "任务库 · 每日打卡";
-    const pointsLabel = taskView.querySelector(".points-banner small"); if (pointsLabel) pointsLabel.textContent = "墨晨的累计成长星星";
     const taskHint = taskView.querySelector(".section-heading .rating-caption"); if (taskHint) taskHint.textContent = "任务库里的任务，每天都能完成";
     const rewardHeading = Array.from(taskView.querySelectorAll(".section-heading h2")).find((heading) => heading.textContent.includes("星星阶梯奖励"));
-    const rewardHint = rewardHeading?.parentElement.querySelector(".rating-caption"); if (rewardHint) rewardHint.textContent = `${state.points} 星 · 持续累计，不会每日清零`;
+    const rewardHint = rewardHeading?.parentElement.querySelector(".rating-caption"); if (rewardHint) rewardHint.textContent = `${state.points} 星可兑换 · 累计获得 ${state.earnedPoints} 星`;
   }
   app.querySelectorAll("[data-action=install]").forEach((button) => button.addEventListener("click", installApp));
-  app.querySelectorAll("[data-action=reward]").forEach((button) => button.addEventListener("click", () => showToast("继续完成任务，解锁下一档家庭奖励吧！")));
-  app.querySelectorAll("[data-reward-detail]").forEach((button) => button.addEventListener("click", () => { const reward = state.rewards[Number(button.dataset.rewardDetail)]; if (reward) showToast(`${reward.title}：${reward.description}（${reward.points} 星）`); }));
+  app.querySelectorAll("[data-action=reward]").forEach((button) => button.addEventListener("click", () => { const reward = redeemableReward() || nextReward(); if (reward) openRewardDetail(state.rewards.indexOf(reward)); }));
+  app.querySelectorAll("[data-reward-detail]").forEach((button) => button.addEventListener("click", () => openRewardDetail(button.dataset.rewardDetail)));
   app.querySelectorAll("[data-action=new-task]").forEach((button) => button.addEventListener("click", () => openTaskEditor()));
   app.querySelectorAll("[data-action=rewards]").forEach((button) => button.addEventListener("click", openRewardEditor));
   app.querySelectorAll("[data-action=permissions]").forEach((button) => button.addEventListener("click", openPermissionEditor));
@@ -474,7 +516,7 @@ function bindEvents() {
   app.querySelectorAll("[data-action=reconnect]").forEach((button) => button.addEventListener("click", () => { button.disabled = true; button.textContent = "连接中…"; void reconnectCloud(); }));
   app.querySelectorAll("[data-action=reset-family]").forEach((button) => button.addEventListener("click", () => { if (window.confirm("确定清空本设备的家庭数据并重新创建吗？云端家庭不会被删除。")) resetThisDeviceFamily(); }));
   app.querySelectorAll("[data-action=copy-invite]").forEach((button) => button.addEventListener("click", async () => { try { await navigator.clipboard.writeText(cloud.inviteCode); showToast(`邀请码 ${cloud.inviteCode} 已复制`); } catch { showToast(`邀请码：${cloud.inviteCode}`); } }));
-  app.querySelectorAll("[data-action=weather]").forEach((button) => button.addEventListener("click", () => { const index = weatherOptions.indexOf(state.weather); state.weather = weatherOptions[(index + 1) % weatherOptions.length]; save("family_weather", state.weather); state.menuIndex = weatherOptions.indexOf(state.weather) % menuSeed.length; save("family_menu", state.menuIndex); void syncCloudState(); render(); showToast(`已按“${state.weather}”重新推荐`); }));
+  app.querySelectorAll("[data-action=weather]").forEach((button) => button.addEventListener("click", () => { const index = weatherOptions.indexOf(state.weather); state.weather = weatherOptions[(index + 1) % weatherOptions.length]; markStateDirty(); save("family_weather", state.weather); state.menuIndex = weatherOptions.indexOf(state.weather) % menuSeed.length; save("family_menu", state.menuIndex); void syncCloudState(); render(); showToast(`已按“${state.weather}”重新推荐`); }));
   app.querySelectorAll("[data-theme]").forEach((button) => button.addEventListener("click", () => { state.theme = button.dataset.theme; save("family_theme", state.theme); applyTheme(); render(); showToast(`已换上${themeOptions.find((item) => item.id === state.theme)?.label || "新皮肤"}`); }));
 }
 
@@ -484,8 +526,10 @@ function completeTask(id) {
   const completedToday = completedDates.includes(today);
   task.completedDates = completedToday ? completedDates.filter((date) => date !== today) : [...new Set([...completedDates, today])];
   task.done = !completedToday;
-  state.points = Math.max(0, state.points + (task.done ? Number(task.points) : -Number(task.points)));
-  save("family_tasks", state.tasks); save("family_points", state.points); void syncCloudState(); render(); showToast(task.done ? `太棒了！获得 ${task.points} 颗成长星星 ✨` : "已取消这次完成记录");
+  const taskPoints = Number(task.points) || 0;
+  state.points = Math.max(0, state.points + (task.done ? taskPoints : -taskPoints));
+  if (task.done) state.earnedPoints += taskPoints;
+  markStateDirty(); save("family_tasks", state.tasks); savePointState(); void syncCloudState(); render(); showToast(task.done ? `太棒了！获得 ${taskPoints} 颗成长星星 ✨` : "已取消这次完成记录");
 }
 
 function openTaskEditor(id = "") {
@@ -494,7 +538,7 @@ function openTaskEditor(id = "") {
   const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
   wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="编辑任务"><h2>${id ? "编辑任务" : "新建任务"}</h2><p>选择任务类型后，系统会自动匹配图标，不需要额外设置。</p><div class="form-grid"><label>任务名称<input id="task-title" value="${escapeHtml(task.title)}" placeholder="例如：阅读 20 分钟" /></label><label>任务描述<textarea id="task-detail" placeholder="告诉孩子怎么完成">${escapeHtml(task.detail)}</textarea></label><label>分类<select id="task-category">${categories.slice(1).map((item) => `<option ${task.category === item ? "selected" : ""}>${item}</option>`).join("")}</select></label><label>完成奖励星星<input id="task-points" type="number" min="0" max="999" value="${Number(task.points) || 0}" /></label></div><div class="task-icon-preview" data-task-icon-preview>${taskIconForCategory(task.category)}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存任务</button></div></div>`;
   document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove()); wrapper.querySelector("#task-category").addEventListener("change", (event) => { wrapper.querySelector("[data-task-icon-preview]").textContent = taskIconForCategory(event.target.value); });
-  wrapper.querySelector("[data-save]").addEventListener("click", () => { const title = wrapper.querySelector("#task-title").value.trim(); if (!title) { wrapper.querySelector("#task-title").focus(); return; } const category = wrapper.querySelector("#task-category").value; const nextTask = normalizeTask({ id: task.id || `task-${Date.now()}`, category, icon: taskIconForCategory(category), title, detail: wrapper.querySelector("#task-detail").value.trim() || "完成后告诉家人你的感受", points: Math.max(0, Number(wrapper.querySelector("#task-points").value) || 0), completedDates: Array.isArray(task.completedDates) ? task.completedDates : [], done: Boolean(task.done) }); const index = state.tasks.findIndex((item) => item.id === nextTask.id); if (index >= 0) state.tasks[index] = nextTask; else state.tasks.push(nextTask); save("family_tasks", state.tasks); void syncCloudState(); wrapper.remove(); render(); showToast("任务库已保存，每天都可以重新完成"); });
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { const title = wrapper.querySelector("#task-title").value.trim(); if (!title) { wrapper.querySelector("#task-title").focus(); return; } const category = wrapper.querySelector("#task-category").value; const nextTask = normalizeTask({ id: task.id || `task-${Date.now()}`, category, icon: taskIconForCategory(category), title, detail: wrapper.querySelector("#task-detail").value.trim() || "完成后告诉家人你的感受", points: Math.max(0, Number(wrapper.querySelector("#task-points").value) || 0), completedDates: Array.isArray(task.completedDates) ? task.completedDates : [], done: Boolean(task.done) }); const index = state.tasks.findIndex((item) => item.id === nextTask.id); if (index >= 0) state.tasks[index] = nextTask; else state.tasks.push(nextTask); markStateDirty(); save("family_tasks", state.tasks); void syncCloudState(); wrapper.remove(); render(); showToast("任务库已保存，每天都可以重新完成"); });
 }
 
 function openRewardEditor() {
@@ -502,7 +546,7 @@ function openRewardEditor() {
   const rows = [...state.rewards, { id: "new", title: "", points: "" }]; const wrapper = document.createElement("div"); wrapper.className = "modal-backdrop";
   wrapper.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="设置阶梯奖励"><h2>奖励与星星设置</h2><p>每一档只需要填写奖励名称和需要的星星数，保存后会显示在成长进度条上。</p><div class="reward-editor-list">${rows.map((item, index) => `<div class="reward-editor-row reward-editor-simple" data-reward-row="${index}"><input data-reward-title placeholder="奖励名称" value="${escapeHtml(item.title)}" /><input data-reward-points type="number" min="1" placeholder="需要星星" value="${item.points}" /></div>`).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close>取消</button><button class="primary-button" data-save>保存阶梯奖励</button></div></div>`;
   document.body.appendChild(wrapper); wrapper.querySelector("[data-close]").addEventListener("click", () => wrapper.remove());
-  wrapper.querySelector("[data-save]").addEventListener("click", () => { const rewards = Array.from(wrapper.querySelectorAll("[data-reward-row]")).map((row, index) => ({ id: state.rewards[index]?.id || `reward-${Date.now()}-${index}`, title: row.querySelector("[data-reward-title]").value.trim(), description: state.rewards[index]?.description || "", points: Number(row.querySelector("[data-reward-points]").value) || 0 })).filter((item) => item.title && item.points > 0).sort((a, b) => a.points - b.points); if (!rewards.length) return; state.rewards = rewards; save("family_rewards", state.rewards); void syncCloudState(); wrapper.remove(); render(); showToast("阶梯奖励已更新"); });
+  wrapper.querySelector("[data-save]").addEventListener("click", () => { const rewards = Array.from(wrapper.querySelectorAll("[data-reward-row]")).map((row, index) => ({ id: state.rewards[index]?.id || `reward-${Date.now()}-${index}`, title: row.querySelector("[data-reward-title]").value.trim(), description: state.rewards[index]?.description || "", points: Number(row.querySelector("[data-reward-points]").value) || 0 })).filter((item) => item.title && item.points > 0).sort((a, b) => a.points - b.points); if (!rewards.length) return; state.rewards = rewards; markStateDirty(); save("family_rewards", state.rewards); void syncCloudState(); wrapper.remove(); render(); showToast("阶梯奖励已更新"); });
 }
 
 async function openPermissionEditor() {
@@ -550,11 +594,11 @@ function regenerateMenu(idea = "") {
     const candidates = bestScore > 0 ? scored.filter((item) => item.score === bestScore) : [];
     if (candidates.length) next = (candidates.find((item) => item.index > state.menuIndex) || candidates[0]).index;
   }
-  state.menuIndex = next; save("family_menu", state.menuIndex); void syncCloudState(); state.view = "menu"; render(); showToast(idea ? `已按你的想法推荐「${currentMenu().name}」` : `已换一组：${currentMenu().name}`); return currentMenu();
+  state.menuIndex = next; markStateDirty(); save("family_menu", state.menuIndex); void syncCloudState(); state.view = "menu"; render(); showToast(idea ? `已按你的想法推荐「${currentMenu().name}」` : `已换一组：${currentMenu().name}`); return currentMenu();
 }
 
 function showToast(text) { document.querySelectorAll(".toast").forEach((item) => item.remove()); const toast = document.createElement("div"); toast.className = "toast"; toast.textContent = text; document.body.appendChild(toast); window.setTimeout(() => toast.remove(), 2800); }
-photoInput.addEventListener("change", () => { const file = photoInput.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { state.photo = reader.result; const qualityScore = Math.min(5, Math.max(3, Math.round(3 + Math.min(2, file.size / 420000)))); state.rating = qualityScore; save("family_photo", state.photo); save("family_rating", state.rating); void syncCloudState(); state.view = "menu"; render(); showToast(`照片上传成功，系统自动评分 ${qualityScore} 星 ✨`); photoInput.value = ""; }; reader.readAsDataURL(file); });
+photoInput.addEventListener("change", () => { const file = photoInput.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { state.photo = reader.result; const qualityScore = Math.min(5, Math.max(3, Math.round(3 + Math.min(2, file.size / 420000)))); state.rating = qualityScore; markStateDirty(); save("family_photo", state.photo); save("family_rating", state.rating); void syncCloudState(); state.view = "menu"; render(); showToast(`照片上传成功，系统自动评分 ${qualityScore} 星 ✨`); photoInput.value = ""; }; reader.readAsDataURL(file); });
 let deferredInstallPrompt;
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); deferredInstallPrompt = event; });
 async function installApp() { if (!deferredInstallPrompt) { showToast("请在浏览器菜单中选择“添加到主屏幕”即可安装"); return; } deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; }
